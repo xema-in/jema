@@ -1,4 +1,4 @@
 export interface LogEntry {
-    name: string;
+    context: string;
     message: any;
 }

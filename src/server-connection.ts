@@ -12,6 +12,8 @@ import { TeamMemberState } from "./_interfaces/team-member-state";
 import { AgentInfo } from "./_interfaces/agent-info";
 import { LogEntry } from "./_interfaces/log-entry";
 import { DeviceMapParameters } from "./_interfaces/device.map";
+import { ConnectionState } from "./_interfaces/connection-state";
+import { PhoneState } from "./_interfaces/phone-state";
 
 export class ServerConnection {
 
@@ -23,10 +25,10 @@ export class ServerConnection {
     public logger = new Subject<LogEntry>();
 
     // default status of connection
-    public connectionState = new BehaviorSubject<any>({ state: 'Unknown' });
-    public phoneState = new BehaviorSubject<any>({ device: 'Unknown', state: 'Unknown' });
-    // public teamLeadFeatures = new BehaviorSubject<boolean>(false);
+    public connectionState = new BehaviorSubject<ConnectionState>({ connected: false, state: 'Unknown' });
+    public phoneState = new BehaviorSubject<PhoneState>({ device: 'Unknown', state: 'Unknown' });
     public breakState = new BehaviorSubject<number>(0);
+    public agent = new Subject<AgentInfo>();
 
     // chat
     public messageReceived = new Subject<ChatMessage>();
@@ -56,7 +58,6 @@ export class ServerConnection {
 
     // other
     public hangup = new Subject<any>();
-    public agent = new Subject<AgentInfo>();
 
     /**
     * Create a connection to the Xema Platform
@@ -76,8 +77,8 @@ export class ServerConnection {
     }
 
     // log messages received on the api
-    private log(name: string, message: any) {
-        this.logger.next({ name: name, message: message });
+    private log(context: string, message: any) {
+        this.logger.next({ context: context, message: message });
     }
 
     //#region signalr setup *** *** *** *** *** *** ***
@@ -278,7 +279,7 @@ export class ServerConnection {
             .then(() => {
                 this.log('SignalR', 'ConnectAsAgent');
                 this.connection.send('ConnectAsAgent').then(() => {
-                    this.connectionState.next({ state: 'Connected' });
+                    this.connectionState.next({ state: 'Connected', connected: true });
                 });
 
             })
