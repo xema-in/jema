@@ -22,6 +22,6 @@ In Test project, run
 
 rm -rf lib/* && rm -rf dist/*
 npm run tsc && npm run webpack
+npm version patch && npm publish && git push
 
 npm publish --dry-run
-npm version patch && npm publish && git push
