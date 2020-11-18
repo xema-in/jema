@@ -14,6 +14,8 @@ import { LogEntry } from "./_interfaces/log-entry";
 import { DeviceMapParameters } from "./_interfaces/device.map";
 import { ConnectionState } from "./_interfaces/connection-state";
 import { PhoneState } from "./_interfaces/phone-state";
+import { BreakState } from "./_interfaces/break-state";
+import { BreakStateCode } from "./_interfaces/break-state-code";
 
 export class ServerConnection {
 
@@ -27,7 +29,7 @@ export class ServerConnection {
     // default status of connection
     public connectionState = new BehaviorSubject<ConnectionState>({ connected: false, state: 'Unknown' });
     public phoneState = new BehaviorSubject<PhoneState>({ device: 'Unknown', state: 'Unknown' });
-    public breakState = new BehaviorSubject<number>(0);
+    public breakState = new BehaviorSubject<BreakState>({ bsCode: BreakStateCode.NotInBreak });
     public agent = new Subject<AgentInfo>();
 
     // chat
@@ -219,28 +221,28 @@ export class ServerConnection {
         ((functionName: string) => {
             this.connection.on(functionName, (message: any) => {
                 this.log(functionName, message);
-                this.breakState.next(1);
+                this.breakState.next({ bsCode: BreakStateCode.WaitingForBreak });
             });
         })('TakeBreak');
 
         ((functionName: string) => {
             this.connection.on(functionName, (message: any) => {
                 this.log(functionName, message);
-                this.breakState.next(2);
+                this.breakState.next({ bsCode: BreakStateCode.InBreak });
             });
         })('EnterBreak');
 
         ((functionName: string) => {
             this.connection.on(functionName, (message: any) => {
                 this.log(functionName, message);
-                this.breakState.next(0);
+                this.breakState.next({ bsCode: BreakStateCode.NotInBreak });
             });
         })('ExitBreak');
 
         ((functionName: string) => {
             this.connection.on(functionName, (message: any) => {
                 this.log(functionName, message);
-                this.breakState.next(0);
+                this.breakState.next({ bsCode: BreakStateCode.NotInBreak });
             });
         })('CancelBreak');
 
