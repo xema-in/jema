@@ -30,7 +30,7 @@ export class ServerConnection {
     public connectionState = new BehaviorSubject<ConnectionState>({ connected: false, state: 'Unknown' });
     public phoneState = new BehaviorSubject<PhoneState>({ device: 'Unknown', state: 'Unknown' });
     public breakState = new BehaviorSubject<BreakState>({ bsCode: BreakStateCode.NotInBreak });
-    public agent = new Subject<AgentInfo>();
+    public agentInfo = new Subject<AgentInfo>();
 
     // chat
     public messageReceived = new Subject<ChatMessage>();
@@ -259,7 +259,7 @@ export class ServerConnection {
         ((functionName: string) => {
             this.connection.on(functionName, (message: any) => {
                 this.log(functionName, message);
-                this.agent.next(message);
+                this.agentInfo.next(message);
             });
         })('AgentInfo');
 
@@ -619,7 +619,7 @@ export class ServerConnection {
         this.connection.send('DisposeCall');
     }
 
-    agentInfo(): void {
+    getAgentInfo(): void {
         this.log('SignalR', 'AgentInfo');
         this.connection.send('AgentInfo');
     }
