@@ -1,0 +1,30 @@
+<html>
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/jema/dist/jema.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/jema@0.0.24/dist/jema.min.js"></script> -->
+    <!-- <script src="./../dist/jema.min.js"></script> -->
+</head>
+
+<body>
+
+    <p>Hello</p>
+
+    <script>
+
+        var url = 'http://192.168.29.60';
+        const tester = new Jema.NetworkTester();
+        tester.ping(url).subscribe(
+            (resp) => {
+                console.log(resp.response); // Pong
+            },
+            (err) => {
+                console.log(err);
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>

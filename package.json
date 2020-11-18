@@ -1,0 +1,32 @@
+{
+    "name": "jema",
+    "version": "0.0.27",
+    "description": "Xema Js Agent Library",
+    "author": {
+        "name": "Sreenivasa Reddy Inukollu",
+        "email": "vasu@xema.in"
+    },
+    "dependencies": {
+        "@microsoft/signalr": "^3.1.5",
+        "axios": "^0.18.1",
+        "rxios": "^2.0.0",
+        "rxjs": "^6.5.5"
+    },
+    "devDependencies": {
+        "ts-loader": "^8.0.11",
+        "typescript": "^3.2.4",
+        "webpack": "^5.4.0",
+        "webpack-cli": "^4.2.0"
+    },
+    "scripts": {
+        "tsc": "tsc",
+        "webpack": "webpack"
+    },
+    "files": [
+        "lib/**/*",
+        "dist/**/*"
+    ],
+    "main": "lib/index",
+    "types": "lib/index",
+    "license": "UNLICENSED"
+}

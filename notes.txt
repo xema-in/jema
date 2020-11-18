@@ -1,0 +1,27 @@
+########################## 
+# typescript learning
+
+Writing npm (JavaScript) libraries using TypeScript - Sam Lanning [OSCON 2019]
+https://www.youtube.com/watch?v=m6Jr6w0W1xw
+
+########################## 
+# npm link locally for dev
+
+For testing the package locally, follow this article.
+https://flaviocopes.com/npm-local-package/
+
+In Jema project, run
+> npm link
+
+In Test project, run
+> npm link jema
+
+
+##########################
+# npm publish commands
+
+rm -rf lib/* && rm -rf dist/*
+npm run tsc && npm run webpack
+
+npm publish --dry-run
+npm version patch && npm publish && git push
