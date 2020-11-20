@@ -1,5 +1,5 @@
 import { Rxios } from "rxios";
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, ReplaySubject, Subject } from 'rxjs';
 import * as signalR from '@microsoft/signalr';
 import { Calldispositions } from "./_interfaces/calldispositions";
 import { EndCall } from "./_interfaces/end-call";
@@ -30,21 +30,21 @@ export class ServerConnection {
     public connectionState = new BehaviorSubject<ConnectionState>({ connected: false, state: 'Unknown' });
     public phoneState = new BehaviorSubject<PhoneState>({ device: 'Unknown', state: 'Unknown' });
     public breakState = new BehaviorSubject<BreakState>({ bsCode: BreakStateCode.NotInBreak });
-    public agentInfo = new Subject<AgentInfo>();
+    public agentInfo = new ReplaySubject<AgentInfo>(1);
 
-    // chat
+    // TODO: chat
     public messageReceived = new Subject<ChatMessage>();
     public chatMessages = new Subject<ChatMessage>();
 
     // ongoing calls
     private ongoingCallsCache: Array<ActiveCall> = [];
-    public ongoingCalls = new Subject<Array<ActiveCall>>();
-
-    private conferenceCallCache: Conference | undefined;
-    public conferenceCall = new Subject<Conference>();
+    public ongoingCalls = new ReplaySubject<Array<ActiveCall>>(1);
 
     private parkedChannelsCache: Array<Channel> = [];
-    public parkedChannels = new Subject<Array<Channel>>();
+    public parkedChannels = new ReplaySubject<Array<Channel>>(1);
+
+    private conferenceCallCache: Conference | undefined;
+    public conferenceCall = new ReplaySubject<Conference>(1);
 
     // task
     private taskCache: any;
