@@ -589,6 +589,11 @@ export class ServerConnection {
         this.connection.send('AskBreak', this.taskCache !== null && this.taskCache !== undefined);
     }
 
+    askBreak2(btCode: number, reason: string) {
+        this.log('SignalR', 'AskBreak2');
+        this.connection.send('AskBreak2', btCode, reason);
+    }
+
     cancelBreak() {
         this.log('SignalR', 'CancelBreak');
         this.connection.send('CancelBreak');
