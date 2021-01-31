@@ -18,10 +18,6 @@ jobs:
       - run: npm run tsc
       - run: npm run webpack
 
-      - uses:  'phips28/gh-action-bump-version@master'
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
-
 
   publish-npm:
     needs: build
@@ -32,6 +28,11 @@ jobs:
         with:
           node-version: 12
           registry-url: https://registry.npmjs.org/
+
+      - uses:  'phips28/gh-action-bump-version@master'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
