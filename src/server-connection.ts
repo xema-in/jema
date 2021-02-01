@@ -104,6 +104,15 @@ export class ServerConnection {
 
         // methods for receiving events
 
+        // remote logout
+        ((functionName: string) => {
+            this.connection.on(functionName, () => {
+                this.connection.stop();
+                this.connectionState.next({ state: 'Remote Logout', connected: false });
+            });
+        })('RemoteLogout');
+
+
         // generic methods
         ((functionName: string) => {
             this.connection.on(functionName, (message: any) => {
