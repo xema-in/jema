@@ -387,7 +387,8 @@ export class ServerConnection {
         this.queueUpdatesCache = this.queueUpdatesCache.filter(x => x.queue !== message.queue);
         const queueUpdateInfo: QueueUpdate = {
             queue: message.queue,
-            size: message.size
+            size: message.size,
+            maxWaitTimestamp: message.maxWaitTimestamp,
         };
         this.queueUpdatesCache.push(queueUpdateInfo);
         this.queueUpdatesCache.sort((qA, qB) => {
