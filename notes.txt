@@ -1,8 +1,8 @@
-########################## 
-# typescript learning
+Merge
+=====
 
-Writing npm (JavaScript) libraries using TypeScript - Sam Lanning [OSCON 2019]
-https://www.youtube.com/watch?v=m6Jr6w0W1xw
+git pull https://github.com/xema-in/jema.git master
+
 
 ########################## 
 # npm link locally for dev

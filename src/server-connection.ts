@@ -104,6 +104,15 @@ export class ServerConnection {
 
         // methods for receiving events
 
+        // remote logout
+        ((functionName: string) => {
+            this.connection.on(functionName, () => {
+                this.connection.stop();
+                this.connectionState.next({ state: 'Remote Logout', connected: false });
+            });
+        })('RemoteLogout');
+
+
         // generic methods
         ((functionName: string) => {
             this.connection.on(functionName, (message: any) => {
@@ -378,7 +387,8 @@ export class ServerConnection {
         this.queueUpdatesCache = this.queueUpdatesCache.filter(x => x.queue !== message.queue);
         const queueUpdateInfo: QueueUpdate = {
             queue: message.queue,
-            size: message.size
+            size: message.size,
+            maxWaitTimestamp: message.maxWaitTimestamp,
         };
         this.queueUpdatesCache.push(queueUpdateInfo);
         this.queueUpdatesCache.sort((qA, qB) => {
