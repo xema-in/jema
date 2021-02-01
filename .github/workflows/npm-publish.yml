@@ -13,3 +13,13 @@ jobs:
       - uses: "phips28/gh-action-bump-version@master"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+      - run: npm ci
+      - run: npm run tsc
+      - run: npm run webpack
+
+      - run: npm publish --dry-run
+        
