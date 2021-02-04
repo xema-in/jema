@@ -402,7 +402,7 @@ export class ServerConnection {
       queue: message.queue,
       size: message.size,
       maxWaitTimestamp: message.maxWaitTimestamp,
-      callVolume: message.CallVolume,
+      callVolume: message.callVolume,
       agentCapacity: message.agentCapacity,
     };
     this.queueUpdatesCache.push(queueUpdateInfo);
