@@ -1,9 +1,9 @@
 <html>
 
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/jema/dist/jema.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/jema/dist/jema.min.js"></script> -->
     <!-- <script src="https://cdn.jsdelivr.net/npm/jema@0.0.24/dist/jema.min.js"></script> -->
-    <!-- <script src="./../dist/jema.min.js"></script> -->
+    <script src="./../dist/jema.min.js"></script>
 </head>
 
 <body>
@@ -13,15 +13,66 @@
     <script>
 
         var url = 'http://192.168.29.60';
-        const tester = new Jema.NetworkTester();
-        tester.ping(url).subscribe(
+        var token = '';
+
+
+        // const tester = new Jema.NetworkTester();
+        // tester.ping(url).subscribe(
+        //     (resp) => {
+        //         console.log('Tester', resp);
+        //     },
+        //     (err) => {
+        //         console.log(err);
+        //     }
+        // );
+
+        const authenticator = new Jema.Authenticator(url);
+        authenticator.getAuthToken({ username: 'user', password: 'N0P@ssword' }).subscribe(
             (resp) => {
-                console.log(resp.response); // Pong
+                console.log('Authenticator', resp);
+                token = resp.auth_token;
             },
             (err) => {
                 console.log(err);
             }
         );
+
+        setTimeout(() => {
+            // wait for the prev calls to succed and fire
+
+            const server = new Jema.ServerConnection(url, token);
+
+            server.IsAgentAuthenticated().subscribe(
+                (resp) => {
+                    console.log('IsAgentAuthenticated', resp);
+                },
+                (err) => {
+                    console.log(err);
+                }
+            );
+
+            server.IsOnline().subscribe(
+                (resp) => {
+                    console.log('IsOnline', resp);
+                },
+                (err) => {
+                    console.log(err);
+                }
+            );
+
+            server.RemoteLogout().subscribe(
+                (resp) => {
+                    console.log('RemoteLogout', resp);
+                },
+                (err) => {
+                    console.log(err);
+                }
+            );
+
+
+        }, 3000);
+
+
 
     </script>
 
