@@ -4,8 +4,16 @@ Merge
 git pull https://github.com/xema-in/jema.git master
 
 
-########################## 
-# npm link locally for dev
+
+Build & pack locally
+====================
+
+rm -rf lib/* && rm -rf dist/*
+npm run tsc && npm run webpack
+
+
+npm link locally for dev
+========================
 
 For testing the package locally, follow this article.
 https://flaviocopes.com/npm-local-package/
@@ -15,14 +23,4 @@ In Jema project, run
 
 In Test project, run
 > npm link jema
-
-
-##########################
-# npm publish commands
-
-rm -rf lib/* && rm -rf dist/*
-npm run tsc && npm run webpack
-npm version patch && npm publish && git push
-
-npm publish --dry-run
 

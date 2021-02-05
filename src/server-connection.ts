@@ -669,6 +669,21 @@ export class ServerConnection {
     return this.remote.get("/api/Account/IsAgentAuthenticated2", {});
   }
 
+  IsOnline() {
+    this.log("Api", "IsAgentOnline");
+    return this.remote.get("/api/Account/IsAgentOnline", {});
+  }
+
+  RemoteLogout() {
+    this.log("Api", "LogoutAgentActiveSession");
+    return this.remote.post("/api/Account/LogoutAgentActiveSession", {});
+  }
+
+  ForceRemoteLogout() {
+    this.log("Api", "ForceLogoutAgentActiveSession");
+    return this.remote.post("/api/Account/ForceLogoutAgentActiveSession", {});
+  }
+
   IsPhoneMapped() {
     this.log("Api", "IsPhoneMapped");
     return this.remote.get("/api/Account/IsPhoneMapped", {});
