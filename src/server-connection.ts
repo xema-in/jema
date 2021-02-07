@@ -16,6 +16,7 @@ import { ConnectionState } from "./_interfaces/connection-state";
 import { PhoneState } from "./_interfaces/phone-state";
 import { BreakState } from "./_interfaces/break-state";
 import { BreakStateCode } from "./_interfaces/break-state-code";
+import { QueryParameters } from "./_interfaces/query-parameters";
 
 export class ServerConnection {
   backendUrl: string;
@@ -660,6 +661,11 @@ export class ServerConnection {
     this.connection.send("AgentInfo");
   }
 
+  barge(targetdeviceid: string): void {
+    this.log("SignalR", "Barge");
+    this.connection.send("Barge", targetdeviceid);
+  }
+
   //#endregion
 
   //#region web api methods *** *** *** *** *** *** ***
@@ -712,6 +718,11 @@ export class ServerConnection {
   getAgents() {
     this.log("Api", "GetTeamMembers");
     return this.remote.get("/api/Agents/GetTeamMembers");
+  }
+
+  getCallHistory(param: QueryParameters) {
+    this.log("Api", "Cdrs");
+    return this.remote.post("/api/Cdrs", param);
   }
 
   //#endregion
