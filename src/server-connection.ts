@@ -30,13 +30,16 @@ export class ServerConnection {
     connected: false,
     state: "Unknown",
   });
+
   public phoneState = new BehaviorSubject<PhoneState>({
     device: "Unknown",
     state: "Unknown",
   });
+
   public breakState = new BehaviorSubject<BreakState>({
     bsCode: BreakStateCode.NotInBreak,
   });
+
   public agentInfo = new ReplaySubject<AgentInfo>(1);
 
   // TODO: chat
