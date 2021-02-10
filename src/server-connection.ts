@@ -680,7 +680,7 @@ export class ServerConnection {
 
   IsOnline() {
     this.log("Api", "IsAgentOnline");
-    return this.remote.get("/api/Account/IsAgentOnline", {});
+    return this.remote.post("/api/Account/IsAgentOnline", {});
   }
 
   RemoteLogout() {
@@ -695,7 +695,7 @@ export class ServerConnection {
 
   IsPhoneMapped() {
     this.log("Api", "IsPhoneMapped");
-    return this.remote.get("/api/Account/IsPhoneMapped", {});
+    return this.remote.post("/api/Account/IsPhoneMapped", {});
   }
 
   mapPhone(param: DeviceMapParameters) {
@@ -720,7 +720,7 @@ export class ServerConnection {
 
   getAgents() {
     this.log("Api", "GetTeamMembers");
-    return this.remote.get("/api/Agents/GetTeamMembers");
+    return this.remote.post("/api/Agents/GetTeamMembers", {});
   }
 
   getCallHistory(param: QueryParameters) {
