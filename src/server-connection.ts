@@ -1,5 +1,9 @@
-import { Rxios } from "rxios";
+import * as signalR from "@microsoft/signalr";
+import * as Collections from 'typescript-collections';
+
 import { Subject, BehaviorSubject, ReplaySubject } from "rxjs";
+import { Rxios } from "rxios";
+
 import { ActiveCall } from "./_interfaces/active-call";
 import { BreakState } from "./_interfaces/break-state";
 import { BreakStateCode } from "./_interfaces/break-state-code";
@@ -14,8 +18,8 @@ import { PhoneState } from "./_interfaces/phone-state";
 import { QueryParameters } from "./_interfaces/query-parameters";
 import { QueueUpdate } from "./_interfaces/queue-update";
 import { TeamMemberState } from "./_interfaces/team-member-state";
-import * as signalR from "@microsoft/signalr";
 import { Info } from "./_interfaces/info";
+import { TeamMemberUpdate } from "./_interfaces/team-member-update";
 
 export class ServerConnection {
 
@@ -59,7 +63,7 @@ export class ServerConnection {
    * User Break status
    */
   public breakState = new BehaviorSubject<BreakState>({
-    bsCode: BreakStateCode.NotInBreak,
+    bsCode: BreakStateCode.InBreak,
     type: 0,
     reason: '',
   });
@@ -92,8 +96,8 @@ export class ServerConnection {
   public queueUpdates = new Subject<Array<QueueUpdate>>();
 
   // team status
-  private teamMemberStatesCache: Array<TeamMemberState> = [];
-  public teamMemberStates = new Subject<Array<TeamMemberState>>();
+  private teamMemberStatesCache = new Collections.Dictionary<string, TeamMemberState>();
+  public teamMemberStates = new BehaviorSubject<Array<TeamMemberState>>([]);
 
   // other
   public hangup = new Subject<any>();
@@ -138,7 +142,7 @@ export class ServerConnection {
    * Connect to server using web sockets
    */
 
-  connect(): void {
+  public connect(): void {
     this.setupSignalR();
 
     // lastly, connect to signalR
@@ -173,6 +177,7 @@ export class ServerConnection {
     // websocket connection disconnected
     this.connection.onclose((err) => {
       this.log("SignalR-OnClose", err);
+
       const currentPhoneState = this.phoneState.value;
       currentPhoneState.state = "Unknown";
       this.phoneState.next(currentPhoneState);
@@ -182,6 +187,7 @@ export class ServerConnection {
       if (this.connectionState.value.state === "LoggedIn") {
         this.retry();
       }
+
     });
 
     //#endregion
@@ -234,6 +240,9 @@ export class ServerConnection {
       this.connection.on(functionName, (message: Info) => {
         this.log(functionName, message);
         this.info.next(message);
+        if (message.agentRoles.teamLead || message.agentRoles.manager) {
+          this.getAgentList();
+        }
       });
     })("AgentInfo");
 
@@ -525,131 +534,99 @@ export class ServerConnection {
 
   //#region processTeamMemberState
 
-  private processTeamMemberState(message: any) {
-    let currentStatus = this.teamMemberStatesCache.find(
-      (x) => x.agentId === message.agentId
-    );
-    if (currentStatus === undefined) {
-      const newMember: TeamMemberState = {
-        agentId: message.agentId,
-        name: message.agentId,
-        firstLoginTime: "",
-        device: "",
-        deviceStatus: "",
-        deviceStatusCss: "secondary",
-        currentCallTimestamp: null,
-        agentStatus: "",
-        queueName: "",
-        caller: "",
-        queueCallTimestamp: null,
-        callUniqueId: "",
-        wrapUpTimestamp: null,
-        breakTimestamp: null,
-        waitingForBreak: false,
-      };
-      this.teamMemberStatesCache.push(newMember);
-      this.askId(newMember.agentId);
+  private processTeamMemberState(message: TeamMemberUpdate) {
 
-      this.teamMemberStatesCache.sort((a, b) => {
-        if (a.name < b.name) {
-          return -1;
-        }
-        if (a.name > b.name) {
-          return 1;
-        }
-        return 0;
-      });
-
-      currentStatus = this.teamMemberStatesCache.find(
-        (x) => x.agentId === message.agentId
-      );
+    if (!this.teamMemberStatesCache.containsKey(message.agentId)) {
+      this.connection.send("AskId", message.agentId);
+      return;
     }
 
-    if (currentStatus === undefined) return; // do i need this? why?
+    let activeAgent = this.teamMemberStatesCache.getValue(message.agentId);
+    if (activeAgent === undefined) return; // do i need this? why?
 
     switch (message.event) {
       case "EndpointDetail":
       case "DeviceStateChanged":
-        currentStatus.device = message.device;
+        activeAgent.device = message.device;
         switch (message.state) {
           case "INUSE":
-            currentStatus.currentCallTimestamp = new Date();
-            currentStatus.deviceStatus = "In Call";
-            currentStatus.deviceStatusCss = "danger";
+            activeAgent.currentCallTimestamp = new Date();
+            activeAgent.deviceStatus = "In Call";
+            activeAgent.deviceStatusCss = "danger";
             break;
           case "Not in use":
           case "NOT_INUSE":
-            currentStatus.deviceStatus = "Idle";
-            currentStatus.deviceStatusCss = "success";
-            if (currentStatus.queueName !== "") {
-              currentStatus.agentStatus = "Wrap Up";
-              currentStatus.wrapUpTimestamp = new Date();
+            activeAgent.deviceStatus = "Idle";
+            activeAgent.deviceStatusCss = "success";
+            if (activeAgent.queueName !== "") {
+              activeAgent.agentStatus = "Wrap Up";
+              activeAgent.wrapUpTimestamp = new Date();
             }
             break;
           case "RINGING":
-            currentStatus.deviceStatus = "Ringing";
-            currentStatus.deviceStatusCss = "warning";
+            activeAgent.deviceStatus = "Ringing";
+            activeAgent.deviceStatusCss = "warning";
             break;
           case "Unavailable":
           case "UNAVAILABLE":
-            currentStatus.deviceStatus = "Offline";
-            currentStatus.deviceStatusCss = "secondary";
+            activeAgent.deviceStatus = "Offline";
+            activeAgent.deviceStatusCss = "secondary";
             break;
           default:
-            currentStatus.deviceStatus = message.state;
-            currentStatus.deviceStatusCss = "secondary";
+            activeAgent.deviceStatus = message.state;
+            activeAgent.deviceStatusCss = "secondary";
             break;
         }
         break;
 
       case "AgentConnect":
-        currentStatus.agentStatus = "Busy";
-        currentStatus.queueName = message.queue;
-        currentStatus.caller = message.caller;
-        currentStatus.callUniqueId = message.callUniqueId;
-        currentStatus.queueCallTimestamp = new Date();
+        activeAgent.agentStatus = "Busy";
+        activeAgent.queueName = message.queue;
+        activeAgent.caller = message.caller;
+        activeAgent.callUniqueId = message.callUniqueId;
+        activeAgent.queueCallTimestamp = new Date();
         break;
 
       case "DisposeCall":
-        currentStatus.agentStatus = "Waiting for Call";
-        currentStatus.queueName = "";
-        currentStatus.caller = "";
-        currentStatus.callUniqueId = "";
+        activeAgent.agentStatus = "Waiting for Call";
+        activeAgent.queueName = "";
+        activeAgent.caller = "";
+        activeAgent.callUniqueId = "";
         break;
 
       case "BreakRequested":
-        currentStatus.waitingForBreak = true;
+        activeAgent.waitingForBreak = true;
         break;
 
       case "BreakCancelled":
-        currentStatus.waitingForBreak = false;
+        activeAgent.waitingForBreak = false;
         break;
 
       case "BreakStarted":
-        currentStatus.agentStatus = "In Break";
-        currentStatus.waitingForBreak = false;
-        currentStatus.breakTimestamp = new Date();
+        activeAgent.agentStatus = "In Break";
+        activeAgent.waitingForBreak = false;
+        activeAgent.breakTimestamp = new Date();
         break;
 
       case "BreakEnded":
-        currentStatus.agentStatus = "Waiting for Call";
-        currentStatus.waitingForBreak = false;
+        activeAgent.agentStatus = "Waiting for Call";
+        activeAgent.waitingForBreak = false;
         break;
 
       case "Connected":
-        currentStatus.agentStatus = "Connecting ...";
-        currentStatus.device = "";
-        currentStatus.deviceStatus = "";
+        activeAgent.agentStatus = "Connecting ...";
+        activeAgent.device = "";
+        activeAgent.deviceStatus = "";
         break;
 
       case "AgentLogin":
-        currentStatus.agentStatus = "Logged In";
-        currentStatus.device = message.device;
-        currentStatus.deviceStatus = "";
+        activeAgent.agentStatus = "Logged In";
+        activeAgent.device = message.device;
+        activeAgent.deviceStatus = "";
         break;
 
       case "Disconnected":
-        currentStatus.agentStatus = "Disconnected";
+        activeAgent.agentStatus = "Disconnected";
         break;
 
       default:
@@ -657,7 +634,7 @@ export class ServerConnection {
         break;
     }
 
-    this.teamMemberStates.next(this.teamMemberStatesCache);
+    this.teamMemberStates.next(this.teamMemberStatesCache.values());
   }
 
   //#endregion
@@ -665,14 +642,11 @@ export class ServerConnection {
 
   //#region processIdCard
 
-  private processIdCard(message: any) {
-    const currentStatus = this.teamMemberStatesCache.find(
-      (x) => x.agentId === message.userName
-    );
-    if (currentStatus !== undefined) {
-      currentStatus.name = message.name;
+  private processIdCard(message: TeamMemberState) {
+    if (!this.teamMemberStatesCache.containsKey(message.agentId)) {
+      this.teamMemberStatesCache.setValue(message.agentId, message);
+      this.teamMemberStates.next(this.teamMemberStatesCache.values());
     }
-    this.teamMemberStates.next(this.teamMemberStatesCache);
   }
 
   //#endregion
@@ -683,98 +657,71 @@ export class ServerConnection {
 
   //#region signalr methods
 
-  whoami(): void {
-    this.log("SignalR", "Whoami");
-    this.connection.send("Whoami");
-  }
-
-  // enableTeamLeadFeatures(flag: boolean) {
-  //     this.teamLeadFeatures.next(flag);
-  // }
-
-  // setAppState(state: any): void {
-  //     this.connectionState.next(state);
-  // }
-
-  refreshPhoneState(): void {
+  public refreshPhoneState(): void {
     this.log("SignalR", "RefreshPhoneState");
     this.connection.send("RefreshPhoneState");
   }
 
-  askId(agentId: string) {
-    this.log("SignalR", "AskId");
-    this.connection.send("AskId", agentId);
-  }
-
   // chat
-  sendChatMessage(message: ChatMessage): void {
+  public sendChatMessage(message: ChatMessage): void {
     this.log("SignalR", "SendMessage");
     this.connection.send("SendMessage", message);
   }
 
-  sendGroupChatMessage(message: ChatMessage): void {
+  public sendGroupChatMessage(message: ChatMessage): void {
     this.log("SignalR", "SendToGroup");
     this.connection.send("SendToGroup", message);
   }
 
   // user actions
-  hold(channel: string): void {
+  public hold(channel: string): void {
     this.log("SignalR", "Hold");
     this.connection.send("Hold", channel);
   }
 
-  resume(channel: string): void {
+  public resume(channel: string): void {
     this.log("SignalR", "Resume");
     this.connection.send("Resume", channel);
   }
 
-  askBreak() {
-    this.log("SignalR", "AskBreak");
-    this.connection.send(
-      "AskBreak",
-      this.taskCache !== null && this.taskCache !== undefined
-    );
-  }
 
-  askBreak2(btCode: number, reason: string) {
+  public askBreak2(btCode: number, reason: string) {
     this.log("SignalR", "AskBreak2");
     this.connection.send("AskBreak2", btCode, reason);
   }
 
-  cancelBreak() {
+  public cancelBreak() {
     this.log("SignalR", "CancelBreak");
     this.connection.send("CancelBreak");
   }
 
-  exitBreak() {
+  public exitBreak() {
     this.log("SignalR", "ExitBreak");
     this.connection.send("ExitBreak");
   }
 
-  call(trunk: string, cli: string, callid: string): void {
+  public call(trunk: string, cli: string, callid: string): void {
     this.log("SignalR", "Call");
     this.connection.send("Call", trunk, cli, callid);
   }
 
-  hangupCall(channel: string): void {
+  public hangupCall(channel: string): void {
     this.log("SignalR", "Hangup");
     this.connection.send("Hangup", channel);
   }
 
-  conference(channels: string[]): void {
+  public conference(channels: string[]): void {
     this.log("SignalR", "Conference");
     this.connection.send("Conference", channels);
   }
 
-  dispose(): void {
+  public dispose(): void {
     this.log("SignalR", "DisposeCall");
     this.connection.send("DisposeCall");
   }
 
-  getAgentInfo(): void {
-  }
 
-  barge(targetdeviceid: string): void {
+  public barge(targetdeviceid: string): void {
     this.log("SignalR", "Barge");
     this.connection.send("Barge", targetdeviceid);
   }
@@ -785,54 +732,71 @@ export class ServerConnection {
 
   // *** REST APIs ***
 
+  //#region private api methods
+
+  private getAgentList() {
+    return this.remote.post("/api/GetAgentList", {})
+      .subscribe(
+        (data: any) => {
+          data.forEach((agent: TeamMemberState) => {
+            if (!this.teamMemberStatesCache.containsKey(agent.agentId))
+              this.teamMemberStatesCache.setValue(agent.agentId, agent);
+          });
+        }
+      );
+  }
+
+  //#endregion
+
+
   //#region web api methods
 
-  IsAgentAuthenticated() {
+  public IsAgentAuthenticated() {
     this.log("Api", "IsAgentAuthenticated2");
     return this.remote.get("/api/Account/IsAgentAuthenticated2", {});
   }
 
-  IsOnline() {
+  public IsOnline() {
     this.log("Api", "IsAgentOnline");
     return this.remote.post("/api/Account/IsAgentOnline", {});
   }
 
-  RemoteLogout() {
+  public RemoteLogout() {
     this.log("Api", "LogoutAgentActiveSession");
     return this.remote.post("/api/Account/LogoutAgentActiveSession", {});
   }
 
-  ForceRemoteLogout() {
+  public ForceRemoteLogout() {
     this.log("Api", "ForceLogoutAgentActiveSession");
     return this.remote.post("/api/Account/ForceLogoutAgentActiveSession", {});
   }
 
-  IsPhoneMapped() {
+  public IsPhoneMapped() {
     this.log("Api", "IsPhoneMapped");
     return this.remote.post("/api/Account/IsPhoneMapped", {});
   }
 
-  mapPhone(param: DeviceMapParameters) {
+  public mapPhone(param: DeviceMapParameters) {
     this.log("Api", "AgentLogin");
     return this.remote.post("/api/Devices/AgentLogin", param);
   }
 
-  unassignPhone() {
+  public unassignPhone() {
     this.log("Api", "UnassignPhone");
     return this.remote.post("/api/Devices/UnassignPhone", {});
   }
 
-  endcall(param: EndCall) {
+  public endcall(param: EndCall) {
     this.log("Api", "HangupCall");
     return this.remote.post("/api/Call/HangupCall", param);
   }
 
-  getAgents() {
+  public getAgents() {
     this.log("Api", "GetTeamMembers");
     return this.remote.post("/api/Agents/GetTeamMembers", {});
   }
 
-  getCallHistory(param: QueryParameters) {
+  public getCallHistory(param: QueryParameters) {
     this.log("Api", "Cdrs");
     return this.remote.post("/api/Cdrs", param);
   }

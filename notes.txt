@@ -4,6 +4,11 @@ Merge
 git pull https://github.com/xema-in/jema.git master
 
 
+Watch & Build
+=============
+
+npm run tsc -- --watch
+npm run webpack -- --watch
 
 Build & pack locally
 ====================
