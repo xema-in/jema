@@ -1,7 +1,6 @@
 import { Rxios } from "rxios";
 import { Subject, BehaviorSubject, ReplaySubject } from "rxjs";
 import { ActiveCall } from "./_interfaces/active-call";
-import { AgentInfo } from "./_interfaces/agent-info";
 import { BreakState } from "./_interfaces/break-state";
 import { BreakStateCode } from "./_interfaces/break-state-code";
 import { Channel } from "./_interfaces/channel";
@@ -16,6 +15,7 @@ import { QueryParameters } from "./_interfaces/query-parameters";
 import { QueueUpdate } from "./_interfaces/queue-update";
 import { TeamMemberState } from "./_interfaces/team-member-state";
 import * as signalR from "@microsoft/signalr";
+import { Info } from "./_interfaces/info";
 
 export class ServerConnection {
 
@@ -67,7 +67,7 @@ export class ServerConnection {
   /**
    * User Info
    */
-  public agentInfo = new ReplaySubject<AgentInfo>(1);
+  public info = new ReplaySubject<Info>(1);
 
   // TODO: chat
   public messageReceived = new Subject<ChatMessage>();
@@ -147,6 +147,7 @@ export class ServerConnection {
       .then(() => {
         this.log("SignalR-Connected", null);
         this.connectionState.next({ state: "Connected", connected: true });
+        this.connection.send("AgentInfo");
       })
       .catch((err) => {
         this.log("SignalR-Error", err);
@@ -230,9 +231,9 @@ export class ServerConnection {
 
     // agentinfo
     ((functionName: string) => {
-      this.connection.on(functionName, (message: any) => {
+      this.connection.on(functionName, (message: Info) => {
         this.log(functionName, message);
-        this.agentInfo.next(message);
+        this.info.next(message);
       });
     })("AgentInfo");
 
@@ -771,8 +772,6 @@ export class ServerConnection {
   }
 
   getAgentInfo(): void {
-    this.log("SignalR", "AgentInfo");
-    this.connection.send("AgentInfo");
   }
 
   barge(targetdeviceid: string): void {
