@@ -2,7 +2,9 @@ import * as signalR from "@microsoft/signalr";
 import * as Collections from 'typescript-collections';
 
 import { Subject, BehaviorSubject, ReplaySubject } from "rxjs";
+import { tap } from 'rxjs/operators';
 import { Rxios } from "rxios";
+
 
 import { ActiveCall } from "./_interfaces/active-call";
 import { BreakState } from "./_interfaces/break-state";
@@ -657,11 +659,6 @@ export class ServerConnection {
 
   //#region signalr methods
 
-  public refreshPhoneState(): void {
-    this.log("SignalR", "RefreshPhoneState");
-    this.connection.send("RefreshPhoneState");
-  }
-
   // chat
   public sendChatMessage(message: ChatMessage): void {
     this.log("SignalR", "SendMessage");
@@ -673,18 +670,7 @@ export class ServerConnection {
     this.connection.send("SendToGroup", message);
   }
 
-  // user actions
-  public hold(channel: string): void {
-    this.log("SignalR", "Hold");
-    this.connection.send("Hold", channel);
-  }
-
-  public resume(channel: string): void {
-    this.log("SignalR", "Resume");
-    this.connection.send("Resume", channel);
-  }
-
-
+  // breaks
   public askBreak2(btCode: number, reason: string) {
     this.log("SignalR", "AskBreak2");
     this.connection.send("AskBreak2", btCode, reason);
@@ -698,6 +684,17 @@ export class ServerConnection {
   public exitBreak() {
     this.log("SignalR", "ExitBreak");
     this.connection.send("ExitBreak");
+  }
+
+  // call management
+  public hold(channel: string): void {
+    this.log("SignalR", "Hold");
+    this.connection.send("Hold", channel);
+  }
+
+  public resume(channel: string): void {
+    this.log("SignalR", "Resume");
+    this.connection.send("Resume", channel);
   }
 
   public call(trunk: string, cli: string, callid: string): void {
@@ -719,7 +716,6 @@ export class ServerConnection {
     this.log("SignalR", "DisposeCall");
     this.connection.send("DisposeCall");
   }
-
 
   public barge(targetdeviceid: string): void {
     this.log("SignalR", "Barge");
@@ -778,7 +774,12 @@ export class ServerConnection {
 
   public mapPhone(param: DeviceMapParameters) {
     this.log("Api", "AgentLogin");
-    return this.remote.post("/api/Devices/AgentLogin", param);
+    return this.remote.post("/api/Devices/AgentLogin", param)
+      .pipe(
+        tap(() => {
+          this.connection.send("RefreshPhoneState");
+        })
+      );
   }
 
   public unassignPhone() {
