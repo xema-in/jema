@@ -1,22 +1,21 @@
 import { Rxios } from "rxios";
-import { BehaviorSubject, ReplaySubject, Subject } from "rxjs";
-import * as signalR from "@microsoft/signalr";
-import { Calldispositions } from "./_interfaces/calldispositions";
-import { EndCall } from "./_interfaces/end-call";
-import { ChatMessage } from "./_interfaces/chat.message";
+import { Subject, BehaviorSubject, ReplaySubject } from "rxjs";
 import { ActiveCall } from "./_interfaces/active-call";
-import { Conference } from "./_interfaces/conference";
-import { Channel } from "./_interfaces/channel";
-import { QueueUpdate } from "./_interfaces/queue-update";
-import { TeamMemberState } from "./_interfaces/team-member-state";
 import { AgentInfo } from "./_interfaces/agent-info";
-import { LogEntry } from "./_interfaces/log-entry";
-import { DeviceMapParameters } from "./_interfaces/device.map";
-import { ConnectionState } from "./_interfaces/connection-state";
-import { PhoneState } from "./_interfaces/phone-state";
 import { BreakState } from "./_interfaces/break-state";
 import { BreakStateCode } from "./_interfaces/break-state-code";
+import { Channel } from "./_interfaces/channel";
+import { ChatMessage } from "./_interfaces/chat.message";
+import { Conference } from "./_interfaces/conference";
+import { ConnectionState } from "./_interfaces/connection-state";
+import { DeviceMapParameters } from "./_interfaces/device.map";
+import { EndCall } from "./_interfaces/end-call";
+import { LogEntry } from "./_interfaces/log-entry";
+import { PhoneState } from "./_interfaces/phone-state";
 import { QueryParameters } from "./_interfaces/query-parameters";
+import { QueueUpdate } from "./_interfaces/queue-update";
+import { TeamMemberState } from "./_interfaces/team-member-state";
+import * as signalR from "@microsoft/signalr";
 
 export class ServerConnection {
 
@@ -827,11 +826,6 @@ export class ServerConnection {
   endcall(param: EndCall) {
     this.log("Api", "HangupCall");
     return this.remote.post("/api/Call/HangupCall", param);
-  }
-
-  calldispositions(param: Calldispositions) {
-    this.log("Api", "CallDispositions");
-    return this.remote.post("/api/Call/CallDispositions", param);
   }
 
   getAgents() {
