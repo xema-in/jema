@@ -19,28 +19,55 @@ import { BreakStateCode } from "./_interfaces/break-state-code";
 import { QueryParameters } from "./_interfaces/query-parameters";
 
 export class ServerConnection {
-  backendUrl: string;
-  token: string;
-  remote: Rxios;
 
+
+  //#region connection variables
+
+  private backendUrl: string;
+  private token: string;
+  private remote: Rxios;
   private connection!: signalR.HubConnection;
+
+  //#endregion
+
+
+  //#region obserables
+
+  /**
+   * Receive logs from the libary
+   */
   public logger = new Subject<LogEntry>();
 
-  // default status of connection
+  /**
+   * Server connection status
+   * Default: { connected: false, state: 'Unknown' }
+   */
   public connectionState = new BehaviorSubject<ConnectionState>({
     connected: false,
-    state: "Unknown",
+    state: 'Unknown',
   });
 
+  /**
+   * Associated Phone status
+   * Default: { device: 'Unknown', state: 'Unknown' }
+   */
   public phoneState = new BehaviorSubject<PhoneState>({
-    device: "Unknown",
-    state: "Unknown",
+    device: 'Unknown',
+    state: 'Unknown',
   });
 
+  /**
+   * User Break status
+   */
   public breakState = new BehaviorSubject<BreakState>({
     bsCode: BreakStateCode.NotInBreak,
+    type: 0,
+    reason: '',
   });
 
+  /**
+   * User Info
+   */
   public agentInfo = new ReplaySubject<AgentInfo>(1);
 
   // TODO: chat
@@ -72,6 +99,9 @@ export class ServerConnection {
   // other
   public hangup = new Subject<any>();
 
+  //#endregion
+
+
   /**
    * Create a connection to the Xema Platform
    */
@@ -89,33 +119,75 @@ export class ServerConnection {
     });
   }
 
-  // log messages received on the api
+
+  //#region logger
+
+  /**
+   * Report debug information to the application
+   * @param context 
+   * @param message 
+   */
+
   private log(context: string, message: any) {
     this.logger.next({ context: context, message: message });
   }
 
-  //#region signalr setup *** *** *** *** *** *** ***
+  //#endregion
+
+
+  /**
+   * Connect to server using web sockets
+   */
+
+  connect(): void {
+    this.setupSignalR();
+
+    // lastly, connect to signalR
+    this.connection
+      .start()
+      .then(() => {
+        this.log("SignalR-Connected", null);
+        this.connectionState.next({ state: "Connected", connected: true });
+      })
+      .catch((err) => {
+        this.log("SignalR-Error", err);
+        if (this.connectionState.value.state === "LoggedIn") {
+          this.retry();
+        }
+      });
+  }
+
+  retry(): void {
+    // setTimeout(() => {
+    //     this.connect();
+    // }, 10000);
+  }
 
   private setupSignalR(): void {
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(`${this.backendUrl}/agents?access_token=${this.token}`)
       .build();
 
+    //#region connection status 
+
     // websocket connection disconnected
     this.connection.onclose((err) => {
-      this.log("OnClose", err);
-      const currentPhoneState: any = this.phoneState.value;
+      this.log("SignalR-OnClose", err);
+      const currentPhoneState = this.phoneState.value;
       currentPhoneState.state = "Unknown";
       this.phoneState.next(currentPhoneState);
+
+      this.connectionState.next({ state: "Disconnected", connected: false });
 
       if (this.connectionState.value.state === "LoggedIn") {
         this.retry();
       }
     });
 
-    // methods for receiving events
+    //#endregion
 
-    // remote logout
+    //#region RemoteLogout
+
     ((functionName: string) => {
       this.connection.on(functionName, () => {
         this.connection.stop();
@@ -123,7 +195,10 @@ export class ServerConnection {
       });
     })("RemoteLogout");
 
-    // generic methods
+    //#endregion
+
+    //#region unused
+
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
         this.log(functionName, message);
@@ -142,7 +217,30 @@ export class ServerConnection {
       });
     })("Whoami");
 
-    // phone status
+
+    //#endregion
+
+    //#region basics
+
+    ((functionName: string) => {
+      this.connection.on(functionName, (message: any) => {
+        this.log(functionName, message);
+        this.processIdCard(message);
+      });
+    })("IdCard");
+
+    // agentinfo
+    ((functionName: string) => {
+      this.connection.on(functionName, (message: any) => {
+        this.log(functionName, message);
+        this.agentInfo.next(message);
+      });
+    })("AgentInfo");
+
+    //#endregion
+
+    //#region phone status
+
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
         this.log(functionName, message);
@@ -150,13 +248,20 @@ export class ServerConnection {
       });
     })("DeviceState");
 
-    // calls
+    //#endregion
+
+    //#region remote party connected VarSetBridgePeer
+
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
         this.log(functionName, message);
         this.processCallEvents(functionName, message);
       });
     })("VarSetBridgePeer");
+
+    //#endregion
+
+    //#region Parked Calls
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
@@ -172,13 +277,19 @@ export class ServerConnection {
       });
     })("ParkedCallGiveUp");
 
-    // calls from queue
+    //#endregion
+
+    //#region calls from queue
+
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
         this.log(functionName, message);
         this.processCallEvents(functionName, message);
       });
     })("AgentConnect");
+    //#endregion
+
+    //#region Confbridge
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
@@ -208,6 +319,10 @@ export class ServerConnection {
       });
     })("ConfbridgeEnd");
 
+    //#endregion
+
+    //#region Monitoring
+
     // queue status update
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
@@ -215,8 +330,6 @@ export class ServerConnection {
         this.processQueueUpdates(message);
       });
     })("QueueSize");
-
-    /// custom messages
 
     // team monitoring
     ((functionName: string) => {
@@ -226,43 +339,42 @@ export class ServerConnection {
       });
     })("TeamMemberState");
 
-    ((functionName: string) => {
-      this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
-        this.processIdCard(message);
-      });
-    })("IdCard");
+    //#endregion
 
-    // break related
+    //#region Breaks
+
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
         this.log(functionName, message);
-        this.breakState.next({ bsCode: BreakStateCode.WaitingForBreak });
+        this.breakState.next({ bsCode: BreakStateCode.WaitingForBreak, type: message.breakTypeCode, reason: message.breakReason });
       });
     })("TakeBreak");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
         this.log(functionName, message);
-        this.breakState.next({ bsCode: BreakStateCode.InBreak });
+        this.breakState.next({ bsCode: BreakStateCode.NotInBreak, type: -1, reason: '' });
+      });
+    })("CancelBreak");
+
+    ((functionName: string) => {
+      this.connection.on(functionName, (message: any) => {
+        this.log(functionName, message);
+        this.breakState.next({ bsCode: BreakStateCode.InBreak, type: message.breakTypeCode, reason: message.breakReason });
       });
     })("EnterBreak");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
         this.log(functionName, message);
-        this.breakState.next({ bsCode: BreakStateCode.NotInBreak });
+        this.breakState.next({ bsCode: BreakStateCode.NotInBreak, type: -1, reason: '' });
       });
     })("ExitBreak");
 
-    ((functionName: string) => {
-      this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
-        this.breakState.next({ bsCode: BreakStateCode.NotInBreak });
-      });
-    })("CancelBreak");
+    //#endregion
 
-    // chat
+    //#region Chat
+
     ((functionName: string) => {
       this.connection.on(functionName, (message: ChatMessage) => {
         this.log(functionName, message);
@@ -270,44 +382,15 @@ export class ServerConnection {
       });
     })("ReceiveMessage");
 
-    // agentinfo
-    ((functionName: string) => {
-      this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
-        this.agentInfo.next(message);
-      });
-    })("AgentInfo");
+    //#endregion
+
   }
 
-  retry(): void {
-    // setTimeout(() => {
-    //     this.connect();
-    // }, 10000);
-  }
 
-  connect(): void {
-    this.setupSignalR();
 
-    // lastly, connect to signalR
-    this.connection
-      .start()
-      .then(() => {
-        this.log("SignalR", "ConnectAsAgent");
-        this.connection.send("ConnectAsAgent").then(() => {
-          this.connectionState.next({ state: "Connected", connected: true });
-        });
-      })
-      .catch((err) => {
-        // console.error(err);
-        if (this.connectionState.value.state === "LoggedIn") {
-          this.retry();
-        }
-      });
-  }
+  // *** MESSAGE PROCESSING ***
 
-  //#endregion
-
-  //#region processing methods *** *** *** *** *** *** ***
+  //#region  processCallEvents
 
   private processCallEvents(event: string, message: any) {
     switch (event) {
@@ -345,6 +428,11 @@ export class ServerConnection {
     this.ongoingCalls.next(this.ongoingCallsCache);
   }
 
+  //#endregion
+
+
+  //#region processParkEvents
+
   private processParkEvents(event: string, message: any) {
     switch (event) {
       case "ParkedCall":
@@ -363,6 +451,11 @@ export class ServerConnection {
     }
     this.parkedChannels.next(this.parkedChannelsCache);
   }
+
+  //#endregion
+
+
+  //#region processConferenceEvents
 
   private processConferenceEvents(event: string, message: any) {
     switch (event) {
@@ -398,6 +491,11 @@ export class ServerConnection {
     this.conferenceCall.next(this.conferenceCallCache);
   }
 
+  //#endregion
+
+
+  //#region processQueueUpdates
+
   private processQueueUpdates(message: any) {
     this.queueUpdatesCache = this.queueUpdatesCache.filter(
       (x) => x.queue !== message.queue
@@ -421,6 +519,11 @@ export class ServerConnection {
     });
     this.queueUpdates.next(this.queueUpdatesCache);
   }
+
+  //#endregion
+
+
+  //#region processTeamMemberState
 
   private processTeamMemberState(message: any) {
     let currentStatus = this.teamMemberStatesCache.find(
@@ -550,12 +653,17 @@ export class ServerConnection {
         break;
 
       default:
-        // console.log('Unhandled Team Member State reported ... ' + message.event);
+        this.log('TeamMemberState', 'Unhandled Team Member State reported ... ' + message.event);
         break;
     }
 
     this.teamMemberStates.next(this.teamMemberStatesCache);
   }
+
+  //#endregion
+
+
+  //#region processIdCard
 
   private processIdCard(message: any) {
     const currentStatus = this.teamMemberStatesCache.find(
@@ -569,7 +677,11 @@ export class ServerConnection {
 
   //#endregion
 
-  //#region signalr methods *** *** *** *** *** *** ***
+
+
+  // *** SIGNALR SERVER FUNCTIONS ***
+
+  //#region signalr methods
 
   whoami(): void {
     this.log("SignalR", "Whoami");
@@ -671,7 +783,11 @@ export class ServerConnection {
 
   //#endregion
 
-  //#region web api methods *** *** *** *** *** *** ***
+
+
+  // *** REST APIs ***
+
+  //#region web api methods
 
   IsAgentAuthenticated() {
     this.log("Api", "IsAgentAuthenticated2");
@@ -729,4 +845,6 @@ export class ServerConnection {
   }
 
   //#endregion
+
+
 }
