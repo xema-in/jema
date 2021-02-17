@@ -341,30 +341,30 @@ export class ServerConnection {
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
         this.log(functionName, message);
-        this.breakState.next({ bsCode: BreakStateCode.WaitingForBreak });
+        this.breakState.next({ bsCode: BreakStateCode.WaitingForBreak, type: message.breakTypeCode, reason: message.breakReason });
       });
     })("TakeBreak");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
         this.log(functionName, message);
-        this.breakState.next({ bsCode: BreakStateCode.InBreak });
+        this.breakState.next({ bsCode: BreakStateCode.NotInBreak, type: -1, reason: '' });
+      });
+    })("CancelBreak");
+
+    ((functionName: string) => {
+      this.connection.on(functionName, (message: any) => {
+        this.log(functionName, message);
+        this.breakState.next({ bsCode: BreakStateCode.InBreak, type: message.breakTypeCode, reason: message.breakReason });
       });
     })("EnterBreak");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
         this.log(functionName, message);
-        this.breakState.next({ bsCode: BreakStateCode.NotInBreak });
+        this.breakState.next({ bsCode: BreakStateCode.NotInBreak, type: -1, reason: '' });
       });
     })("ExitBreak");
-
-    ((functionName: string) => {
-      this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
-        this.breakState.next({ bsCode: BreakStateCode.NotInBreak });
-      });
-    })("CancelBreak");
 
     //#endregion
 
