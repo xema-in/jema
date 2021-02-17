@@ -146,13 +146,11 @@ export class ServerConnection {
     this.connection
       .start()
       .then(() => {
-        this.log("SignalR", "ConnectAsAgent");
-        this.connection.send("ConnectAsAgent").then(() => {
-          this.connectionState.next({ state: "Connected", connected: true });
-        });
+        this.log("SignalR-Connected", null);
+        this.connectionState.next({ state: "Connected", connected: true });
       })
       .catch((err) => {
-        // console.error(err);
+        this.log("SignalR-Error", err);
         if (this.connectionState.value.state === "LoggedIn") {
           this.retry();
         }
@@ -174,10 +172,12 @@ export class ServerConnection {
 
     // websocket connection disconnected
     this.connection.onclose((err) => {
-      this.log("OnClose", err);
-      const currentPhoneState: any = this.phoneState.value;
+      this.log("SignalR-OnClose", err);
+      const currentPhoneState = this.phoneState.value;
       currentPhoneState.state = "Unknown";
       this.phoneState.next(currentPhoneState);
+
+      this.connectionState.next({ state: "Disconnected", connected: false });
 
       if (this.connectionState.value.state === "LoggedIn") {
         this.retry();
@@ -197,7 +197,7 @@ export class ServerConnection {
 
     //#endregion
 
-    //#region generic methods
+    //#region unused
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
@@ -216,6 +216,11 @@ export class ServerConnection {
         this.log(functionName, message);
       });
     })("Whoami");
+
+
+    //#endregion
+
+    //#region basics
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
@@ -648,7 +653,7 @@ export class ServerConnection {
         break;
 
       default:
-        // console.log('Unhandled Team Member State reported ... ' + message.event);
+        this.log('TeamMemberState', 'Unhandled Team Member State reported ... ' + message.event);
         break;
     }
 
@@ -676,7 +681,7 @@ export class ServerConnection {
 
   // *** SIGNALR SERVER FUNCTIONS ***
 
-  //#region signalr methods *** *** *** *** *** *** ***
+  //#region signalr methods
 
   whoami(): void {
     this.log("SignalR", "Whoami");
