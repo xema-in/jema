@@ -594,7 +594,7 @@ export class ServerConnection {
 
       case "TaskCompleted":
         activeAgent.hasTask = false;
-        activeAgent.agentStatus = "Waiting for Call";
+        activeAgent.agentStatus = "Ready";
         activeAgent.taskId = "";
         activeAgent.queueName = "";
         activeAgent.callerId = "";
@@ -626,7 +626,7 @@ export class ServerConnection {
         activeAgent.inBreak = false;
         activeAgent.breakTypeCode = -1;
         activeAgent.breakReason = '';
-        activeAgent.agentStatus = "Waiting for Call";
+        activeAgent.agentStatus = "Ready";
         break;
 
       case "Connected":
