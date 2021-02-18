@@ -22,6 +22,7 @@ import { QueueUpdate } from "./_interfaces/queue-update";
 import { TeamMemberState } from "./_interfaces/team-member-state";
 import { Info } from "./_interfaces/info";
 import { TeamMemberUpdate } from "./_interfaces/team-member-update";
+import { QueueState } from "./_interfaces/queue-state";
 
 export class ServerConnection {
 
@@ -94,8 +95,8 @@ export class ServerConnection {
   public task = new Subject<any>();
 
   // queue updates
-  private queueUpdatesCache: Array<QueueUpdate> = [];
-  public queueUpdates = new Subject<Array<QueueUpdate>>();
+  private queueStatesCache = new Collections.Dictionary<string, QueueState>();
+  public queueStates = new BehaviorSubject<Array<QueueState>>([]);
 
   // team status
   private teamMemberStatesCache = new Collections.Dictionary<string, TeamMemberState>();
@@ -508,28 +509,19 @@ export class ServerConnection {
 
   //#region processQueueUpdates
 
-  private processQueueUpdates(message: any) {
-    this.queueUpdatesCache = this.queueUpdatesCache.filter(
-      (x) => x.queue !== message.queue
-    );
-    const queueUpdateInfo: QueueUpdate = {
+  private processQueueUpdates(message: QueueUpdate) {
+
+    this.queueStatesCache.setValue(message.queue, {
       queue: message.queue,
       size: message.size,
       maxWaitTimestamp: message.maxWaitTimestamp,
-      callVolume: message.callVolume,
-      agentCapacity: message.agentCapacity,
-    };
-    this.queueUpdatesCache.push(queueUpdateInfo);
-    this.queueUpdatesCache.sort((qA, qB) => {
-      if (qA.queue < qB.queue) {
-        return -1;
-      }
-      if (qA.queue > qB.queue) {
-        return 1;
-      }
-      return 0;
+      callsEntered: message.callVolume.callsEntered,
+      callsConnected: message.callVolume.callsConnected,
+      agentsConnected: message.agentCapacity.agentsConnected,
+      agentsActive: message.agentCapacity.agentsActive,
     });
-    this.queueUpdates.next(this.queueUpdatesCache);
+
+    this.queueStates.next(this.queueStatesCache.values());
   }
 
   //#endregion
