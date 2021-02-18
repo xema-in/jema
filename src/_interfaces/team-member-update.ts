@@ -3,26 +3,15 @@ export interface TeamMemberUpdate {
     event: string;
     agentId: string;
 
-    device: string;
-    state: string;
+    phoneId: string;
+    phoneState: string;
 
-    queue: string;
-    caller: string;
-    callUniqueId: string;
+    breakTypeCode: number;
+    breakReason: string;
 
-    // agentStatus: string;
-
-    // waitingForBreak: boolean;
-    // breakTimestamp: Date;
-
-    // deviceStatus: string;
-
-    // queueName: string;
-    // callUniqueId: string;
-    // caller: string;
-    // queueCallTimestamp: Date;
-
-    // currentCallTimestamp: Date;
-    // wrapUpTimestamp: Date;
+    taskId: string;
+    queueName: string;
+    callerId: string;
+    ahtTarget: number;
 
 }

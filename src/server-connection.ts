@@ -100,6 +100,7 @@ export class ServerConnection {
   // team status
   private teamMemberStatesCache = new Collections.Dictionary<string, TeamMemberState>();
   public teamMemberStates = new BehaviorSubject<Array<TeamMemberState>>([]);
+  public teamMemberState = new Subject<TeamMemberState>();
 
   // other
   public hangup = new Subject<any>();
@@ -549,86 +550,105 @@ export class ServerConnection {
     switch (message.event) {
       case "EndpointDetail":
       case "DeviceStateChanged":
-        activeAgent.device = message.device;
-        switch (message.state) {
+        activeAgent.phoneId = message.phoneId;
+        switch (message.phoneState) {
           case "INUSE":
-            activeAgent.currentCallTimestamp = new Date();
-            activeAgent.deviceStatus = "In Call";
+            activeAgent.phoneStatus = "In Call";
             activeAgent.deviceStatusCss = "danger";
+            activeAgent.currentCallTimestamp = new Date();
             break;
           case "Not in use":
           case "NOT_INUSE":
-            activeAgent.deviceStatus = "Idle";
+            activeAgent.phoneStatus = "Idle";
             activeAgent.deviceStatusCss = "success";
-            if (activeAgent.queueName !== "") {
+            if (activeAgent.hasTask) {
               activeAgent.agentStatus = "Wrap Up";
               activeAgent.wrapUpTimestamp = new Date();
             }
             break;
           case "RINGING":
-            activeAgent.deviceStatus = "Ringing";
+            activeAgent.phoneStatus = "Ringing";
             activeAgent.deviceStatusCss = "warning";
             break;
           case "Unavailable":
           case "UNAVAILABLE":
-            activeAgent.deviceStatus = "Offline";
+            activeAgent.phoneStatus = "Offline";
             activeAgent.deviceStatusCss = "secondary";
             break;
           default:
-            activeAgent.deviceStatus = message.state;
+            activeAgent.phoneStatus = message.phoneState;
             activeAgent.deviceStatusCss = "secondary";
             break;
         }
         break;
 
-      case "AgentConnect":
+      case "TaskAssigned":
+        activeAgent.hasTask = true;
         activeAgent.agentStatus = "Busy";
-        activeAgent.queueName = message.queue;
-        activeAgent.caller = message.caller;
-        activeAgent.callUniqueId = message.callUniqueId;
+        activeAgent.taskId = message.taskId;
+        activeAgent.queueName = message.queueName;
+        activeAgent.callerId = message.callerId;
+        activeAgent.ahtTarget = message.ahtTarget;
         activeAgent.queueCallTimestamp = new Date();
         break;
 
-      case "DisposeCall":
+      case "TaskCompleted":
+        activeAgent.hasTask = false;
         activeAgent.agentStatus = "Waiting for Call";
+        activeAgent.taskId = "";
         activeAgent.queueName = "";
-        activeAgent.caller = "";
-        activeAgent.callUniqueId = "";
+        activeAgent.callerId = "";
+        activeAgent.ahtTarget = -1;
         break;
 
       case "BreakRequested":
         activeAgent.waitingForBreak = true;
+        activeAgent.breakTypeCode = message.breakTypeCode;
+        activeAgent.breakReason = message.breakReason;
         break;
 
       case "BreakCancelled":
         activeAgent.waitingForBreak = false;
+        activeAgent.breakTypeCode = -1;
+        activeAgent.breakReason = '';
         break;
 
       case "BreakStarted":
-        activeAgent.agentStatus = "In Break";
         activeAgent.waitingForBreak = false;
+        activeAgent.inBreak = true;
+        activeAgent.breakTypeCode = message.breakTypeCode;
+        activeAgent.breakReason = message.breakReason;
         activeAgent.breakTimestamp = new Date();
+        activeAgent.agentStatus = "In Break";
         break;
 
       case "BreakEnded":
+        activeAgent.inBreak = false;
+        activeAgent.breakTypeCode = -1;
+        activeAgent.breakReason = '';
         activeAgent.agentStatus = "Waiting for Call";
-        activeAgent.waitingForBreak = false;
         break;
 
       case "Connected":
+        activeAgent.connected = true;
         activeAgent.agentStatus = "Connecting ...";
-        activeAgent.device = "";
-        activeAgent.deviceStatus = "";
-        break;
-
-      case "AgentLogin":
-        activeAgent.agentStatus = "Logged In";
-        activeAgent.device = message.device;
-        activeAgent.deviceStatus = "";
+        activeAgent.hasPhone = false;
         break;
 
       case "Disconnected":
+        activeAgent.connected = false;
         activeAgent.agentStatus = "Disconnected";
+        break;
+
+      case "PhoneAssigned":
+        activeAgent.hasPhone = true;
+        activeAgent.agentStatus = "Logged In";
+        activeAgent.phoneId = message.phoneId;
+        break;
+
+      case "PhoneUnassigned":
+        activeAgent.hasPhone = false;
+        activeAgent.agentStatus = "No Phone";
         break;
 
       default:
@@ -636,6 +656,7 @@ export class ServerConnection {
         break;
     }
 
+    this.teamMemberState.next(activeAgent);
     this.teamMemberStates.next(this.teamMemberStatesCache.values());
   }
 

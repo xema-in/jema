@@ -2,22 +2,30 @@ export interface TeamMemberState {
 
     agentId: string;
     name: string;
-    firstLogin: string;
+
+    connected: boolean;
     agentStatus: string;
+    // firstLogin: string; //
 
     waitingForBreak: boolean;
+    breakTypeCode: number;
+    breakReason: string;
+    inBreak: boolean;
     breakTimestamp: Date;
 
-    device: string;
-    deviceStatus: string;
-    deviceStatusCss: string;
+    hasPhone: boolean;
+    phoneId: string;
+    phoneStatus: string;
+    deviceStatusCss: string; //
 
+    hasTask: boolean;
+    taskId: string;
     queueName: string;
-    callUniqueId: string;
-    caller: string;
-    queueCallTimestamp: Date;
+    callerId: string;
+    ahtTarget: number;
+    queueCallTimestamp: Date; //
 
-    currentCallTimestamp: Date;
-    wrapUpTimestamp: Date;
+    currentCallTimestamp: Date; //
+    wrapUpTimestamp: Date; //
 
 }
