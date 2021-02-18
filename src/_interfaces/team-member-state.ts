@@ -1,24 +1,31 @@
-export class TeamMemberState {
+export interface TeamMemberState {
 
-    agentId!: string;
-    name!: string;
-    firstLoginTime!: string;
+    agentId: string;
+    name: string;
 
-    device!: string;
-    deviceStatus!: string;
-    deviceStatusCss!: string;
-    currentCallTimestamp!: Date | null;
+    connected: boolean;
+    agentStatus: string;
+    // firstLogin: string; //
 
-    agentStatus!: string;
+    waitingForBreak: boolean;
+    breakTypeCode: number;
+    breakReason: string;
+    inBreak: boolean;
+    breakTimestamp: Date;
 
-    queueName!: string;
-    caller!: string;
-    queueCallTimestamp!: Date | null;
-    callUniqueId!: string;
+    hasPhone: boolean;
+    phoneId: string;
+    phoneStatus: string;
+    deviceStatusCss: string; //
 
-    wrapUpTimestamp!: Date | null;
+    hasTask: boolean;
+    taskId: string;
+    queueName: string;
+    callerId: string;
+    ahtTarget: number;
+    queueCallTimestamp: Date; //
 
-    waitingForBreak!: boolean;
-    breakTimestamp!: Date | null;
+    currentCallTimestamp: Date; //
+    wrapUpTimestamp: Date; //
 
 }

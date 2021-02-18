@@ -1,6 +1,6 @@
-export class AgentInfo {
-    agentName!: string;
-    empCode!: string;
-    firstLogin!: string;
-    loginDuration!: string;
+export interface AgentInfo {
+    userId: string;
+    agentName: string;
+    login: string;
+    firstLogin: string;
 }
