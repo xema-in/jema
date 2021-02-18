@@ -586,7 +586,7 @@ export class ServerConnection {
         activeAgent.queueName = message.queueName;
         activeAgent.callerId = message.callerId;
         activeAgent.ahtTarget = message.ahtTarget;
-        activeAgent.queueCallTimestamp = new Date();
+        activeAgent.taskTimestamp = new Date();
         break;
 
       case "TaskCompleted":
