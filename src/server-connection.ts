@@ -591,6 +591,7 @@ export class ServerConnection {
       case "TaskCompleted":
         activeAgent.hasTask = false;
         activeAgent.agentStatus = "Ready";
+        activeAgent.agentSubStatus = "";
         activeAgent.taskId = "";
         activeAgent.queueName = "";
         activeAgent.callerId = "";
