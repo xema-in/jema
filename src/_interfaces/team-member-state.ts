@@ -5,7 +5,7 @@ export interface TeamMemberState {
 
     connected: boolean;
     agentStatus: string;
-    // firstLogin: string; //
+    agentSubStatus: string;
 
     waitingForBreak: boolean;
     breakTypeCode: number;
@@ -16,15 +16,14 @@ export interface TeamMemberState {
     hasPhone: boolean;
     phoneId: string;
     phoneStatus: string;
-    deviceStatusCss: string; //
 
     hasTask: boolean;
     taskId: string;
     queueName: string;
     callerId: string;
     ahtTarget: number;
-    queueCallTimestamp: Date; //
 
+    queueCallTimestamp: Date; //
     currentCallTimestamp: Date; //
     wrapUpTimestamp: Date; //
 
