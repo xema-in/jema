@@ -554,30 +554,26 @@ export class ServerConnection {
         switch (message.phoneState) {
           case "INUSE":
             activeAgent.phoneStatus = "In Call";
-            activeAgent.deviceStatusCss = "danger";
+            activeAgent.agentSubStatus = "In Call";
             activeAgent.currentCallTimestamp = new Date();
             break;
           case "Not in use":
           case "NOT_INUSE":
             activeAgent.phoneStatus = "Idle";
-            activeAgent.deviceStatusCss = "success";
             if (activeAgent.hasTask) {
-              activeAgent.agentStatus = "Wrap Up";
+              activeAgent.agentSubStatus = "Wrap Up";
               activeAgent.wrapUpTimestamp = new Date();
             }
             break;
           case "RINGING":
             activeAgent.phoneStatus = "Ringing";
-            activeAgent.deviceStatusCss = "warning";
             break;
           case "Unavailable":
           case "UNAVAILABLE":
             activeAgent.phoneStatus = "Offline";
-            activeAgent.deviceStatusCss = "secondary";
             break;
           default:
             activeAgent.phoneStatus = message.phoneState;
-            activeAgent.deviceStatusCss = "secondary";
             break;
         }
         break;
@@ -585,6 +581,7 @@ export class ServerConnection {
       case "TaskAssigned":
         activeAgent.hasTask = true;
         activeAgent.agentStatus = "Busy";
+        activeAgent.agentSubStatus = "Waiting";
         activeAgent.taskId = message.taskId;
         activeAgent.queueName = message.queueName;
         activeAgent.callerId = message.callerId;
@@ -595,6 +592,7 @@ export class ServerConnection {
       case "TaskCompleted":
         activeAgent.hasTask = false;
         activeAgent.agentStatus = "Ready";
+        activeAgent.agentSubStatus = "";
         activeAgent.taskId = "";
         activeAgent.queueName = "";
         activeAgent.callerId = "";
