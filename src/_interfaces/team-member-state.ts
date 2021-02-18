@@ -23,8 +23,8 @@ export interface TeamMemberState {
     callerId: string;
     ahtTarget: number;
 
-    queueCallTimestamp: Date; //
-    currentCallTimestamp: Date; //
-    wrapUpTimestamp: Date; //
+    taskTimestamp: Date;
+    currentCallTimestamp: Date;
+    wrapUpTimestamp: Date;
 
 }
