@@ -91,8 +91,7 @@ export class ServerConnection {
   public conferenceCall = new ReplaySubject<Conference>(1);
 
   // task
-  private taskCache: any;
-  public task = new Subject<any>();
+  public task = new ReplaySubject<any>(1);
 
   // queue updates
   private queueStatesCache = new Collections.Dictionary<string, QueueState>();
@@ -433,8 +432,7 @@ export class ServerConnection {
         break;
       case "AgentConnect": // fired when call is sent from queue
         // register new task
-        this.taskCache = message;
-        this.task.next(this.taskCache);
+        this.task.next(message);
         break;
     }
 
