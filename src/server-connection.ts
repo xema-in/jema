@@ -5,7 +5,6 @@ import { Subject, BehaviorSubject, ReplaySubject } from "rxjs";
 import { tap } from 'rxjs/operators';
 import { Rxios } from "rxios";
 
-
 import { ActiveCall } from "./_interfaces/active-call";
 import { BreakState } from "./_interfaces/break-state";
 import { BreakStateCode } from "./_interfaces/break-state-code";
@@ -746,6 +745,7 @@ export class ServerConnection {
             if (!this.teamMemberStatesCache.containsKey(agent.agentId))
               this.teamMemberStatesCache.setValue(agent.agentId, agent);
           });
+          this.teamMemberStates.next(this.teamMemberStatesCache.values());
         }
       );
   }
