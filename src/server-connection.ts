@@ -33,6 +33,9 @@ export class ServerConnection {
   private remote: Rxios;
   private connection!: signalR.HubConnection;
 
+  private userLoggedout = false;
+  private userRemoteLoggedout = false;
+
   //#endregion
 
 
@@ -145,6 +148,9 @@ export class ServerConnection {
    */
 
   public connect(): void {
+    this.userLoggedout = false;
+    this.userRemoteLoggedout = false;
+
     this.setupSignalR();
 
     // lastly, connect to signalR
@@ -169,6 +175,11 @@ export class ServerConnection {
     // }, 10000);
   }
 
+  public disconnect(): void {
+    this.userLoggedout = true;
+    this.connection.stop();
+  }
+
   private setupSignalR(): void {
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(`${this.backendUrl}/agents?access_token=${this.token}`)
@@ -184,10 +195,15 @@ export class ServerConnection {
       currentPhoneState.state = "Unknown";
       this.phoneState.next(currentPhoneState);
 
-      this.connectionState.next({ state: "Disconnected", connected: false });
-
-      if (this.connectionState.value.state === "LoggedIn") {
-        this.retry();
+      if (this.userLoggedout) {
+        this.connectionState.next({ state: "Logout", connected: false });
+      } else if (this.userRemoteLoggedout) {
+        this.connectionState.next({ state: "RemoteLogout", connected: false });
+      } else {
+        this.connectionState.next({ state: "Disconnected", connected: false });
+        if (this.connectionState.value.state === "LoggedIn") {
+          this.retry();
+        }
       }
 
     });
@@ -198,8 +214,8 @@ export class ServerConnection {
 
     ((functionName: string) => {
       this.connection.on(functionName, () => {
+        this.userRemoteLoggedout = true;
         this.connection.stop();
-        this.connectionState.next({ state: "Remote Logout", connected: false });
       });
     })("RemoteLogout");
 
