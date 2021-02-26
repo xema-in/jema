@@ -539,7 +539,7 @@ export class ServerConnection {
     switch (message.event) {
       case "EndpointDetail":
       case "DeviceStateChanged":
-        activeAgent.phoneId = message.phoneId;
+        // activeAgent.phoneId = message.phoneId;
         switch (message.phoneState) {
           case "INUSE":
             activeAgent.phoneStatus = "In Call";
@@ -635,6 +635,7 @@ export class ServerConnection {
       case "PhoneUnassigned":
         activeAgent.hasPhone = false;
         activeAgent.agentStatus = "No Phone";
+        activeAgent.phoneId = '';
         break;
 
       default:
