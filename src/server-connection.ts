@@ -555,7 +555,6 @@ export class ServerConnection {
     switch (message.event) {
       case "EndpointDetail":
       case "DeviceStateChanged":
-        activeAgent.phoneId = message.phoneId;
         switch (message.phoneState) {
           case "INUSE":
             activeAgent.phoneStatus = "In Call";
@@ -651,6 +650,7 @@ export class ServerConnection {
       case "PhoneUnassigned":
         activeAgent.hasPhone = false;
         activeAgent.agentStatus = "No Phone";
+        activeAgent.phoneId = '';
         break;
 
       default:
@@ -667,11 +667,43 @@ export class ServerConnection {
 
   //#region processIdCard
 
-  private processIdCard(message: TeamMemberState) {
+  private processIdCard(message: any) {
     if (!this.teamMemberStatesCache.containsKey(message.agentId)) {
-      this.teamMemberStatesCache.setValue(message.agentId, message);
+      this.teamMemberStatesCache.setValue(message.agentId, this.discoverAgentState(message));
       this.teamMemberStates.next(this.teamMemberStatesCache.values());
     }
+  }
+
+  private discoverAgentState(message: any): TeamMemberState {
+    const agent: TeamMemberState = {
+      agentId: message.agentId,
+      name: message.name,
+      connected: message.online,
+      agentStatus: '', // infer
+      agentSubStatus: '', // infer
+      waitingForBreak: message.waitingBreak,
+      breakTypeCode: -1, // infer
+      breakReason: message.breakReason,
+      inBreak: message.inBreak,
+      breakTimestamp: new Date(),  // infer
+      hasPhone: message.hasPhone,
+      phoneId: message.phoneId,
+      phoneStatus: '',  // infer
+      hasTask: message.onTask,
+      taskId: message.taskId,
+      queueName: '',  // infer
+      callerId: '',  // infer
+      ahtTarget: -1,  // infer
+      taskTimestamp: new Date(), // infer
+      currentCallTimestamp: new Date(), // infer
+      wrapUpTimestamp: new Date(), // infer
+    };
+
+    if (message.state === 'InBreak') agent.agentStatus = 'In Break';
+    if (message.state === 'Busy') agent.agentStatus = 'Busy';
+    if (message.state === 'Idle') agent.agentStatus = 'Ready';
+
+    return agent;
   }
 
   //#endregion
@@ -757,9 +789,9 @@ export class ServerConnection {
     return this.remote.post("/api/GetAgentList", {})
       .subscribe(
         (data: any) => {
-          data.forEach((agent: TeamMemberState) => {
-            if (!this.teamMemberStatesCache.containsKey(agent.agentId))
-              this.teamMemberStatesCache.setValue(agent.agentId, agent);
+          data.forEach((message: any) => {
+            if (!this.teamMemberStatesCache.containsKey(message.agentId))
+              this.teamMemberStatesCache.setValue(message.agentId, this.discoverAgentState(message));
           });
           this.teamMemberStates.next(this.teamMemberStatesCache.values());
         }
