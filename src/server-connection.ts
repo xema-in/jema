@@ -553,19 +553,24 @@ export class ServerConnection {
     if (activeAgent === undefined) return; // do i need this? why?
 
     switch (message.event) {
+      case "AgentStateChanged": {
+        activeAgent.agentStatus = message.agentState;
+        break;
+      }
+
       case "EndpointDetail":
       case "DeviceStateChanged":
         switch (message.phoneState) {
           case "INUSE":
             activeAgent.phoneStatus = "In Call";
-            activeAgent.agentSubStatus = "In Call";
+            activeAgent.agentSubStatus = "Working";
             activeAgent.currentCallTimestamp = new Date();
             break;
           case "Not in use":
           case "NOT_INUSE":
             activeAgent.phoneStatus = "Idle";
             if (activeAgent.hasTask) {
-              activeAgent.agentSubStatus = "Wrap Up";
+              activeAgent.agentSubStatus = "Closing";
               activeAgent.wrapUpTimestamp = new Date();
             }
             break;
@@ -584,7 +589,6 @@ export class ServerConnection {
 
       case "TaskAssigned":
         activeAgent.hasTask = true;
-        activeAgent.agentStatus = "Busy";
         activeAgent.taskId = message.taskId;
         activeAgent.queueName = message.queueName;
         activeAgent.callerId = message.callerId;
@@ -594,7 +598,6 @@ export class ServerConnection {
 
       case "TaskCompleted":
         activeAgent.hasTask = false;
-        activeAgent.agentStatus = "Ready";
         activeAgent.agentSubStatus = "";
         activeAgent.taskId = "";
         activeAgent.queueName = "";
@@ -619,37 +622,31 @@ export class ServerConnection {
         activeAgent.inBreak = true;
         activeAgent.breakTypeCode = message.breakTypeCode;
         activeAgent.breakReason = message.breakReason;
-        activeAgent.breakTimestamp = new Date();
-        activeAgent.agentStatus = "InBreak";
+        activeAgent.breakTimestamp = new Date(message.breakStartTimestamp);
         break;
 
       case "BreakEnded":
         activeAgent.inBreak = false;
         activeAgent.breakTypeCode = -1;
         activeAgent.breakReason = '';
-        activeAgent.agentStatus = "Ready";
         break;
 
       case "Connected":
         activeAgent.connected = true;
-        activeAgent.agentStatus = "Connecting ...";
         activeAgent.hasPhone = false;
         break;
 
       case "Disconnected":
         activeAgent.connected = false;
-        activeAgent.agentStatus = "Disconnected";
         break;
 
       case "PhoneAssigned":
         activeAgent.hasPhone = true;
-        activeAgent.agentStatus = "Logged In";
         activeAgent.phoneId = message.phoneId;
         break;
 
       case "PhoneUnassigned":
         activeAgent.hasPhone = false;
-        activeAgent.agentStatus = "No Phone";
         activeAgent.phoneId = '';
         break;
 
@@ -679,13 +676,13 @@ export class ServerConnection {
       agentId: message.agentId,
       name: message.name,
       connected: message.online,
-      agentStatus: '', // infer
-      agentSubStatus: '', // infer
+      agentStatus: message.state,
+      agentSubStatus: message.busyState,
       waitingForBreak: message.waitingBreak,
       breakTypeCode: -1, // infer
       breakReason: message.breakReason,
       inBreak: message.inBreak,
-      breakTimestamp: new Date(),  // infer
+      breakTimestamp: new Date(message.breakStartTimestamp),  // infer
       hasPhone: message.hasPhone,
       phoneId: message.phoneId,
       phoneStatus: '',  // infer
@@ -698,14 +695,6 @@ export class ServerConnection {
       currentCallTimestamp: new Date(), // infer
       wrapUpTimestamp: new Date(), // infer
     };
-
-    // if (message.state === 'InBreak') agent.agentStatus = 'In Break';
-    // else if (message.state === 'NoPhone') agent.agentStatus = 'No Phone';
-    // else if (message.state === 'Busy') agent.agentStatus = 'Busy';
-    // else if (message.state === 'Idle') agent.agentStatus = 'Ready';
-    // else agent.agentStatus = message.state;
-
-    agent.agentStatus = message.state;
 
     return agent;
   }
