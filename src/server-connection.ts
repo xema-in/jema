@@ -620,7 +620,7 @@ export class ServerConnection {
         activeAgent.breakTypeCode = message.breakTypeCode;
         activeAgent.breakReason = message.breakReason;
         activeAgent.breakTimestamp = new Date();
-        activeAgent.agentStatus = "In Break";
+        activeAgent.agentStatus = "InBreak";
         break;
 
       case "BreakEnded":
@@ -699,9 +699,13 @@ export class ServerConnection {
       wrapUpTimestamp: new Date(), // infer
     };
 
-    if (message.state === 'InBreak') agent.agentStatus = 'In Break';
-    if (message.state === 'Busy') agent.agentStatus = 'Busy';
-    if (message.state === 'Idle') agent.agentStatus = 'Ready';
+    // if (message.state === 'InBreak') agent.agentStatus = 'In Break';
+    // else if (message.state === 'NoPhone') agent.agentStatus = 'No Phone';
+    // else if (message.state === 'Busy') agent.agentStatus = 'Busy';
+    // else if (message.state === 'Idle') agent.agentStatus = 'Ready';
+    // else agent.agentStatus = message.state;
+
+    agent.agentStatus = message.state;
 
     return agent;
   }
