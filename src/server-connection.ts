@@ -22,6 +22,7 @@ import { TeamMemberState } from "./_interfaces/team-member-state";
 import { Info } from "./_interfaces/info";
 import { TeamMemberUpdate } from "./_interfaces/team-member-update";
 import { QueueState } from "./_interfaces/queue-state";
+import { DialerState } from "./_interfaces/dialer-state";
 
 export class ServerConnection {
 
@@ -98,6 +99,10 @@ export class ServerConnection {
   // queue updates
   private queueStatesCache = new Collections.Dictionary<string, QueueState>();
   public queueStates = new BehaviorSubject<Array<QueueState>>([]);
+
+  // dialer updates
+  private dialerStatesCache = new Collections.Dictionary<string, DialerState>();
+  public dialerStates = new BehaviorSubject<Array<DialerState>>([]);
 
   // team status
   private teamMemberStatesCache = new Collections.Dictionary<string, TeamMemberState>();
@@ -350,6 +355,14 @@ export class ServerConnection {
 
     //#region Monitoring
 
+    // dialer status update
+    ((functionName: string) => {
+      this.connection.on(functionName, (message: any) => {
+        this.log(functionName, message);
+        this.processDialerUpdates(message);
+      });
+    })("DialerProgress");
+
     // queue status update
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
@@ -519,6 +532,16 @@ export class ServerConnection {
 
   //#endregion
 
+
+  //#region processDialerUpdates
+
+  private processDialerUpdates(message: DialerState) {
+    this.dialerStatesCache.setValue(message.id.toString(), message);
+
+    this.dialerStates.next(this.dialerStatesCache.values());
+  }
+
+  //#endregion
 
   //#region processQueueUpdates
 
