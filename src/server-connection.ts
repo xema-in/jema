@@ -226,7 +226,13 @@ export class ServerConnection {
 
     //#endregion
 
-    //#region unused
+    //#region diagnostics
+
+    ((functionName: string) => {
+      this.connection.on(functionName, (message: any) => {
+        this.connection.send("Pong", message);
+      });
+    })("Ping");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
