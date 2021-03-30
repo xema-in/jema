@@ -23,6 +23,7 @@ import { Info } from "./_interfaces/info";
 import { TeamMemberUpdate } from "./_interfaces/team-member-update";
 import { QueueState } from "./_interfaces/queue-state";
 import { DialerState } from "./_interfaces/dialer-state";
+import { GuiType } from "./_interfaces/gui-type";
 
 export class ServerConnection {
 
@@ -31,6 +32,8 @@ export class ServerConnection {
 
   private backendUrl: string;
   private token: string;
+  private guiType: GuiType;
+
   private remote: Rxios;
   private connection!: signalR.HubConnection;
 
@@ -119,9 +122,11 @@ export class ServerConnection {
    * Create a connection to the Xema Platform
    */
 
-  constructor(url: string, token: string) {
+  constructor(url: string, token: string, primaryGuiType: GuiType) {
     this.backendUrl = url;
     this.token = token;
+    this.guiType = primaryGuiType;
+
     this.remote = new Rxios({
       baseURL: this.backendUrl,
       headers: {
@@ -164,6 +169,11 @@ export class ServerConnection {
       .then(() => {
         this.log("SignalR-Connected", null);
         this.connectionState.next({ state: "Connected", connected: true });
+        switch (this.guiType) {
+          case GuiType.Agent:
+            this.connection.send("ActivateAgent");
+            break;
+        }
         this.connection.send("AgentInfo");
       })
       .catch((err) => {
