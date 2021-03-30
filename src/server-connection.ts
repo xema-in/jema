@@ -24,6 +24,7 @@ import { TeamMemberUpdate } from "./_interfaces/team-member-update";
 import { QueueState } from "./_interfaces/queue-state";
 import { DialerState } from "./_interfaces/dialer-state";
 import { GuiType } from "./_interfaces/gui-type";
+import { MissedCall } from "./_interfaces/missed-call";
 
 export class ServerConnection {
 
@@ -85,6 +86,9 @@ export class ServerConnection {
   // TODO: chat
   public messageReceived = new Subject<ChatMessage>();
   public chatMessages = new Subject<ChatMessage>();
+
+  // missed call
+  public missedCall = new Subject<MissedCall>();
 
   // ongoing calls
   private ongoingCallsCache: Array<ActiveCall> = [];
@@ -284,6 +288,14 @@ export class ServerConnection {
         }
       });
     })("AgentInfo");
+
+    // missed call
+    ((functionName: string) => {
+      this.connection.on(functionName, (message: MissedCall) => {
+        this.log(functionName, message);
+        this.missedCall.next(message);
+      });
+    })("MissedCall");
 
     //#endregion
 
@@ -888,6 +900,11 @@ export class ServerConnection {
   public getCallHistory(param: QueryParameters) {
     this.log("Api", "Cdrs");
     return this.remote.post("/api/Cdrs", param);
+  }
+
+  public getAgentMissedCalls() {
+    this.log("Api", "AgentMissedCalls");
+    return this.remote.post("/api/AgentMissedCalls", {});
   }
 
   //#endregion
