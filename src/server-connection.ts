@@ -821,6 +821,16 @@ export class ServerConnection {
     this.connection.send("Barge", targetdeviceid);
   }
 
+  public whisper(targetdeviceid: string): void {
+    this.log("SignalR", "Whisper");
+    this.connection.send("Whisper", targetdeviceid);
+  }
+
+  public spy(targetdeviceid: string): void {
+    this.log("SignalR", "Spy");
+    this.connection.send("Spy", targetdeviceid);
+  }
+
   //#endregion
 
 
