@@ -40,6 +40,7 @@ export class ServerConnection {
 
   private userLoggedout = false;
   private userRemoteLoggedout = false;
+  private retryCount = 0;
 
   //#endregion
 
@@ -164,6 +165,7 @@ export class ServerConnection {
   public connect(): void {
     this.userLoggedout = false;
     this.userRemoteLoggedout = false;
+    this.retryCount++;
 
     this.setupSignalR();
 
@@ -189,9 +191,10 @@ export class ServerConnection {
   }
 
   retry(): void {
-    // setTimeout(() => {
-    //     this.connect();
-    // }, 10000);
+    this.log("SignalR-Retry", this.retryCount);
+    setTimeout(() => {
+      this.connect();
+    }, 1000);
   }
 
   public disconnect(): void {
@@ -218,11 +221,11 @@ export class ServerConnection {
         this.connectionState.next({ state: "Logout", connected: false });
       } else if (this.userRemoteLoggedout) {
         this.connectionState.next({ state: "RemoteLogout", connected: false });
+      } else if (this.retryCount < 10) {
+        this.connectionState.next({ state: "Reconnecting", connected: false });
+        this.retry();
       } else {
         this.connectionState.next({ state: "Disconnected", connected: false });
-        if (this.connectionState.value.state === "LoggedIn") {
-          this.retry();
-        }
       }
 
     });
