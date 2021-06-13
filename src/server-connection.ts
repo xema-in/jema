@@ -1,7 +1,7 @@
 import * as signalR from "@microsoft/signalr";
 import * as Collections from 'typescript-collections';
 
-import { Subject, BehaviorSubject, ReplaySubject } from "rxjs";
+import { Subject, BehaviorSubject, ReplaySubject, Observable } from "rxjs";
 import { tap } from 'rxjs/operators';
 import { Rxios } from "rxios";
 
@@ -38,8 +38,15 @@ export class ServerConnection {
   private remote: Rxios;
   private connection!: signalR.HubConnection;
 
+  private agentPhoneId: string = '';
+  private bargePhoneId: string = '';
+
   private userLoggedout = false;
   private userRemoteLoggedout = false;
+
+  private connectionAttemptCounter = 0;
+  private connectionCounter = 0;
+  private reconnect = false;
   private retryCount = 0;
 
   //#endregion
@@ -165,6 +172,7 @@ export class ServerConnection {
   public connect(): void {
     this.userLoggedout = false;
     this.userRemoteLoggedout = false;
+    this.connectionAttemptCounter++;
     this.retryCount++;
 
     this.setupSignalR();
@@ -173,24 +181,38 @@ export class ServerConnection {
     this.connection
       .start()
       .then(() => {
-        this.log("SignalR-Connected", null);
-        this.connectionState.next({ state: "Connected", connected: true });
+        this.connectionCounter++;
+        this.retryCount = 0;
+        this.log("SignalR-Connected", { attempts: this.connectionAttemptCounter, connected: this.connectionCounter });
+
+        if (!this.reconnect) {
+          this.connectionState.next({ state: "Connected", connected: true });
+        } else {
+          this.connectionState.next({ state: "Reconnected", connected: true });
+        }
+
         switch (this.guiType) {
           case GuiType.Agent:
             this.connection.send("ActivateAgent");
+            this.connection.send("AgentInfo");
+            if (this.reconnect && this.agentPhoneId != '') {
+              this.ActivateAgentAudioChannel(this.agentPhoneId);
+            }
+            break;
+          case GuiType.LiveView:
+            if (this.reconnect && this.bargePhoneId != '') {
+              this.ActivateBargeAudioChannel(this.bargePhoneId);
+            }
             break;
         }
-        this.connection.send("AgentInfo");
       })
       .catch((err) => {
-        this.log("SignalR-Error", err);
-        if (this.connectionState.value.state === "LoggedIn") {
-          this.retry();
-        }
+        this.log("SignalR-Error", { attempts: this.connectionAttemptCounter, connected: this.connectionCounter });
+        this.retry();
       });
   }
 
-  retry(): void {
+  private retry(): void {
     this.log("SignalR-Retry", this.retryCount);
     setTimeout(() => {
       this.connect();
@@ -211,7 +233,7 @@ export class ServerConnection {
 
     // websocket connection disconnected
     this.connection.onclose((err) => {
-      this.log("SignalR-OnClose", err);
+      this.log("SignalR-OnClose", null);
 
       const currentPhoneState = this.phoneState.value;
       currentPhoneState.state = "Unknown";
@@ -222,6 +244,7 @@ export class ServerConnection {
       } else if (this.userRemoteLoggedout) {
         this.connectionState.next({ state: "RemoteLogout", connected: false });
       } else if (this.retryCount < 10) {
+        this.reconnect = true;
         this.connectionState.next({ state: "Reconnecting", connected: false });
         this.retry();
       } else {
@@ -757,9 +780,9 @@ export class ServerConnection {
 
 
 
-  // *** SIGNALR SERVER FUNCTIONS ***
+  // *** User Initiated Actions ***
 
-  //#region signalr methods
+  //#region methods
 
   // chat
   public sendChatMessage(message: ChatMessage): void {
@@ -814,6 +837,9 @@ export class ServerConnection {
     this.connection.send("Conference", channels);
   }
 
+  /** 
+   * Dispose the task
+   */
   public dispose(): void {
     this.log("SignalR", "DisposeCall");
     this.connection.send("DisposeCall");
@@ -885,9 +911,16 @@ export class ServerConnection {
     return this.remote.post("/api/Account/IsPhoneMapped", {});
   }
 
-  public mapPhone(param: DeviceMapParameters) {
+  public ActivateBargeAudioChannel(phoneId: string) {
+    this.log("ActivateBargeAudioChannel", phoneId);
+    this.bargePhoneId = phoneId;
+    this.connection.send("ActivateBargeAudioChannel", phoneId);
+  }
+
+  public ActivateAgentAudioChannel(phoneId: string) {
     this.log("Api", "AgentLogin");
-    return this.remote.post("/api/Devices/AgentLogin", param)
+    this.agentPhoneId = phoneId;
+    return this.remote.post("/api/Devices/AgentLogin", { deviceName: phoneId })
       .pipe(
         tap(() => {
           this.connection.send("RefreshPhoneState");
@@ -895,9 +928,24 @@ export class ServerConnection {
       );
   }
 
+  /**
+   * @deprecated Use ActivateAgentAudioChannel() method.
+   */
+  public mapPhone(param: DeviceMapParameters) {
+    return this.ActivateAgentAudioChannel(param.deviceName);
+  }
+
+  /**
+   * @deprecated This functionality is removed
+   */
   public unassignPhone() {
-    this.log("Api", "UnassignPhone");
-    return this.remote.post("/api/Devices/UnassignPhone", {});
+    this.log("Deprecated", "UnassignPhone");
+    // this.log("Api", "UnassignPhone");
+    // return this.remote.post("/api/Devices/UnassignPhone", {});
+    return new Observable(obs => {
+      obs.next({ message: 'This functionality is removed' });
+      obs.complete();
+    })
   }
 
   public endcall(param: EndCall) {
