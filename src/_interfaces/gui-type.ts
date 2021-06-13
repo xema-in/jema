@@ -7,4 +7,5 @@ export enum GuiType {
     OperationsLead = 5,
     Manager = 6,
     ProcessOwner = 7,
+    LiveView = 8,
 }
