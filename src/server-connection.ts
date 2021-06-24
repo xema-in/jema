@@ -194,12 +194,14 @@ export class ServerConnection {
         switch (this.guiType) {
           case GuiType.Agent:
             this.connection.send("ActivateAgent");
+            this.connection.send("ActivateMonitor"); // TL
             this.connection.send("AgentInfo");
             if (this.reconnect && this.agentPhoneId != '') {
               this.ActivateAgentAudioChannel(this.agentPhoneId);
             }
             break;
           case GuiType.LiveView:
+            this.connection.send("ActivateMonitor"); // TL & Manager
             if (this.reconnect && this.bargePhoneId != '') {
               this.ActivateBargeAudioChannel(this.bargePhoneId);
             }
