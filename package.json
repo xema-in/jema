@@ -7,7 +7,7 @@
         "email": "vasu@xema.in"
     },
     "dependencies": {
-        "@microsoft/signalr": "^3.1.15",
+        "@microsoft/signalr": "^3.1.16",
         "axios": "^0.21.1",
         "rxios": "^2.0.0",
         "rxjs": "^6.6.7",
