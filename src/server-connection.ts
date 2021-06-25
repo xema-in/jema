@@ -25,9 +25,9 @@ import { QueueState } from "./_interfaces/queue-state";
 import { DialerState } from "./_interfaces/dialer-state";
 import { GuiType } from "./_interfaces/gui-type";
 import { MissedCall } from "./_interfaces/missed-call";
+import { LogType } from "./_interfaces/log-type";
 
 export class ServerConnection {
-
 
   //#region connection variables
 
@@ -48,6 +48,7 @@ export class ServerConnection {
   private connectionCounter = 0;
   private reconnect = false;
   private retryCount = 0;
+  private maxRetryCount = 100;
 
   //#endregion
 
@@ -158,8 +159,8 @@ export class ServerConnection {
    * @param message 
    */
 
-  private log(context: string, message: any) {
-    this.logger.next({ context: context, message: message });
+  private log(context: string, message: any, type: LogType) {
+    this.logger.next({ context: context, message: message, type: type });
   }
 
   //#endregion
@@ -183,7 +184,7 @@ export class ServerConnection {
       .then(() => {
         this.connectionCounter++;
         this.retryCount = 0;
-        this.log("SignalR-Connected", { attempts: this.connectionAttemptCounter, connected: this.connectionCounter });
+        this.log("SignalR-Connected", { attempts: this.connectionAttemptCounter, connected: this.connectionCounter }, LogType.Warning);
 
         if (!this.reconnect) {
           this.connectionState.next({ state: "Connected", connected: true });
@@ -209,13 +210,13 @@ export class ServerConnection {
         }
       })
       .catch((err) => {
-        this.log("SignalR-Error", { attempts: this.connectionAttemptCounter, connected: this.connectionCounter });
+        this.log("SignalR-Error", { attempts: this.connectionAttemptCounter, connected: this.connectionCounter }, LogType.Warning);
         this.retry();
       });
   }
 
   private retry(): void {
-    this.log("SignalR-Retry", this.retryCount);
+    this.log("SignalR-Retry", this.retryCount, LogType.Warning);
     setTimeout(() => {
       this.connect();
     }, 1000);
@@ -235,7 +236,7 @@ export class ServerConnection {
 
     // websocket connection disconnected
     this.connection.onclose((err) => {
-      this.log("SignalR-OnClose", null);
+      this.log("SignalR-OnClose", null, LogType.Warning);
 
       const currentPhoneState = this.phoneState.value;
       currentPhoneState.state = "Unknown";
@@ -245,7 +246,7 @@ export class ServerConnection {
         this.connectionState.next({ state: "Logout", connected: false });
       } else if (this.userRemoteLoggedout) {
         this.connectionState.next({ state: "RemoteLogout", connected: false });
-      } else if (this.retryCount < 10) {
+      } else if (this.retryCount < this.maxRetryCount) {
         this.reconnect = true;
         this.connectionState.next({ state: "Reconnecting", connected: false });
         this.retry();
@@ -278,19 +279,19 @@ export class ServerConnection {
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
       });
     })("Broadcast");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
       });
     })("Echo");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
       });
     })("Whoami");
 
@@ -301,7 +302,7 @@ export class ServerConnection {
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processIdCard(message);
       });
     })("IdCard");
@@ -309,7 +310,7 @@ export class ServerConnection {
     // agentinfo
     ((functionName: string) => {
       this.connection.on(functionName, (message: Info) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.info.next(message);
         if (message.agentRoles.teamLead || message.agentRoles.manager) {
           this.getAgentList();
@@ -320,7 +321,7 @@ export class ServerConnection {
     // missed call
     ((functionName: string) => {
       this.connection.on(functionName, (message: MissedCall) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.missedCall.next(message);
       });
     })("MissedCall");
@@ -331,7 +332,7 @@ export class ServerConnection {
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.phoneState.next(message);
       });
     })("DeviceState");
@@ -342,7 +343,7 @@ export class ServerConnection {
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processCallEvents(functionName, message);
       });
     })("VarSetBridgePeer");
@@ -353,14 +354,14 @@ export class ServerConnection {
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processParkEvents(functionName, message);
       });
     })("ParkedCall");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processParkEvents(functionName, message);
       });
     })("ParkedCallGiveUp");
@@ -371,7 +372,7 @@ export class ServerConnection {
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processCallEvents(functionName, message);
       });
     })("AgentConnect");
@@ -381,28 +382,28 @@ export class ServerConnection {
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processConferenceEvents(functionName, message);
       });
     })("ConfbridgeStart");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processConferenceEvents(functionName, message);
       });
     })("ConfbridgeJoin");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processConferenceEvents(functionName, message);
       });
     })("ConfbridgeLeave");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processConferenceEvents(functionName, message);
       });
     })("ConfbridgeEnd");
@@ -414,7 +415,7 @@ export class ServerConnection {
     // dialer status update
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processDialerUpdates(message);
       });
     })("DialerProgress");
@@ -422,7 +423,7 @@ export class ServerConnection {
     // queue status update
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processQueueUpdates(message);
       });
     })("QueueSize");
@@ -430,7 +431,7 @@ export class ServerConnection {
     // team monitoring
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.processTeamMemberState(message);
       });
     })("TeamMemberState");
@@ -441,28 +442,28 @@ export class ServerConnection {
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.breakState.next({ bsCode: BreakStateCode.WaitingForBreak, type: message.breakTypeCode, reason: message.breakReason });
       });
     })("TakeBreak");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.breakState.next({ bsCode: BreakStateCode.NotInBreak, type: -1, reason: '' });
       });
     })("CancelBreak");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.breakState.next({ bsCode: BreakStateCode.InBreak, type: message.breakTypeCode, reason: message.breakReason });
       });
     })("EnterBreak");
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: any) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.breakState.next({ bsCode: BreakStateCode.NotInBreak, type: -1, reason: '' });
       });
     })("ExitBreak");
@@ -473,7 +474,7 @@ export class ServerConnection {
 
     ((functionName: string) => {
       this.connection.on(functionName, (message: ChatMessage) => {
-        this.log(functionName, message);
+        this.log(functionName, message, LogType.Log);
         this.messageReceived.next(message);
       });
     })("ReceiveMessage");
@@ -730,7 +731,7 @@ export class ServerConnection {
         break;
 
       default:
-        this.log('TeamMemberState', 'Unhandled Team Member State reported ... ' + message.event);
+        this.log('TeamMemberState', 'Unhandled Team Member State reported ... ' + message.event, LogType.Log);
         break;
     }
 
@@ -788,54 +789,54 @@ export class ServerConnection {
 
   // chat
   public sendChatMessage(message: ChatMessage): void {
-    this.log("SignalR", "SendMessage");
+    this.log("SignalR", "SendMessage", LogType.Log);
     this.connection.send("SendMessage", message);
   }
 
   public sendGroupChatMessage(message: ChatMessage): void {
-    this.log("SignalR", "SendToGroup");
+    this.log("SignalR", "SendToGroup", LogType.Log);
     this.connection.send("SendToGroup", message);
   }
 
   // breaks
   public askBreak2(btCode: number, reason: string) {
-    this.log("SignalR", "AskBreak2");
+    this.log("SignalR", "AskBreak2", LogType.Log);
     this.connection.send("AskBreak2", btCode, reason);
   }
 
   public cancelBreak() {
-    this.log("SignalR", "CancelBreak");
+    this.log("SignalR", "CancelBreak", LogType.Log);
     this.connection.send("CancelBreak");
   }
 
   public exitBreak() {
-    this.log("SignalR", "ExitBreak");
+    this.log("SignalR", "ExitBreak", LogType.Log);
     this.connection.send("ExitBreak");
   }
 
   // call management
   public hold(channel: string): void {
-    this.log("SignalR", "Hold");
+    this.log("SignalR", "Hold", LogType.Log);
     this.connection.send("Hold", channel);
   }
 
   public resume(channel: string): void {
-    this.log("SignalR", "Resume");
+    this.log("SignalR", "Resume", LogType.Log);
     this.connection.send("Resume", channel);
   }
 
   public call(trunk: string, cli: string, callid: string): void {
-    this.log("SignalR", "Call");
+    this.log("SignalR", "Call", LogType.Log);
     this.connection.send("Call", trunk, cli, callid);
   }
 
   public hangupCall(channel: string): void {
-    this.log("SignalR", "Hangup");
+    this.log("SignalR", "Hangup", LogType.Log);
     this.connection.send("Hangup", channel);
   }
 
   public conference(channels: string[]): void {
-    this.log("SignalR", "Conference");
+    this.log("SignalR", "Conference", LogType.Log);
     this.connection.send("Conference", channels);
   }
 
@@ -843,22 +844,22 @@ export class ServerConnection {
    * Dispose the task
    */
   public dispose(): void {
-    this.log("SignalR", "DisposeCall");
+    this.log("SignalR", "DisposeCall", LogType.Log);
     this.connection.send("DisposeCall");
   }
 
   public barge(targetdeviceid: string): void {
-    this.log("SignalR", "Barge");
+    this.log("SignalR", "Barge", LogType.Log);
     this.connection.send("Barge", targetdeviceid);
   }
 
   public whisper(targetdeviceid: string): void {
-    this.log("SignalR", "Whisper");
+    this.log("SignalR", "Whisper", LogType.Log);
     this.connection.send("Whisper", targetdeviceid);
   }
 
   public spy(targetdeviceid: string): void {
-    this.log("SignalR", "Spy");
+    this.log("SignalR", "Spy", LogType.Log);
     this.connection.send("Spy", targetdeviceid);
   }
 
@@ -889,38 +890,38 @@ export class ServerConnection {
   //#region web api methods
 
   public IsAgentAuthenticated() {
-    this.log("Api", "IsAgentAuthenticated2");
+    this.log("Api", "IsAgentAuthenticated2", LogType.Log);
     return this.remote.get("/api/Account/IsAgentAuthenticated2", {});
   }
 
   public IsOnline() {
-    this.log("Api", "IsAgentOnline");
+    this.log("Api", "IsAgentOnline", LogType.Log);
     return this.remote.post("/api/Account/IsAgentOnline", {});
   }
 
   public RemoteLogout() {
-    this.log("Api", "LogoutAgentActiveSession");
+    this.log("Api", "LogoutAgentActiveSession", LogType.Log);
     return this.remote.post("/api/Account/LogoutAgentActiveSession", {});
   }
 
   public ForceRemoteLogout() {
-    this.log("Api", "ForceLogoutAgentActiveSession");
+    this.log("Api", "ForceLogoutAgentActiveSession", LogType.Log);
     return this.remote.post("/api/Account/ForceLogoutAgentActiveSession", {});
   }
 
   public IsPhoneMapped() {
-    this.log("Api", "IsPhoneMapped");
+    this.log("Api", "IsPhoneMapped", LogType.Log);
     return this.remote.post("/api/Account/IsPhoneMapped", {});
   }
 
   public ActivateBargeAudioChannel(phoneId: string) {
-    this.log("ActivateBargeAudioChannel", phoneId);
+    this.log("ActivateBargeAudioChannel", phoneId, LogType.Log);
     this.bargePhoneId = phoneId;
     this.connection.send("ActivateBargeAudioChannel", phoneId);
   }
 
   public ActivateAgentAudioChannel(phoneId: string) {
-    this.log("Api", "AgentLogin");
+    this.log("Api", "AgentLogin", LogType.Log);
     this.agentPhoneId = phoneId;
     return this.remote.post("/api/Devices/AgentLogin", { deviceName: phoneId })
       .pipe(
@@ -941,7 +942,7 @@ export class ServerConnection {
    * @deprecated This functionality is removed
    */
   public unassignPhone() {
-    this.log("Deprecated", "UnassignPhone");
+    this.log("Deprecated", "UnassignPhone", LogType.Log);
     // this.log("Api", "UnassignPhone");
     // return this.remote.post("/api/Devices/UnassignPhone", {});
     return new Observable(obs => {
@@ -951,22 +952,22 @@ export class ServerConnection {
   }
 
   public endcall(param: EndCall) {
-    this.log("Api", "HangupCall");
+    this.log("Api", "HangupCall", LogType.Log);
     return this.remote.post("/api/Call/HangupCall", param);
   }
 
   public getAgents() {
-    this.log("Api", "GetTeamMembers");
+    this.log("Api", "GetTeamMembers", LogType.Log);
     return this.remote.post("/api/Agents/GetTeamMembers", {});
   }
 
   public getCallHistory(param: QueryParameters) {
-    this.log("Api", "Cdrs");
+    this.log("Api", "Cdrs", LogType.Log);
     return this.remote.post("/api/Cdrs", param);
   }
 
   public getAgentMissedCalls() {
-    this.log("Api", "AgentMissedCalls");
+    this.log("Api", "AgentMissedCalls", LogType.Log);
     return this.remote.post("/api/AgentMissedCalls", {});
   }
 
