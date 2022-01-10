@@ -111,6 +111,9 @@ export class ServerConnection {
 
   // task
   public task = new ReplaySubject<any>(1);
+  private inTask: boolean = false;
+  private firstBridgedCall: ActiveCall | null = null;
+  private lastBridgedCall: ActiveCall | null = null;
 
   // queue updates
   private queueStatesCache = new Collections.Dictionary<string, QueueState>();
@@ -492,15 +495,16 @@ export class ServerConnection {
   private processCallEvents(event: string, message: any) {
     switch (event) {
       case "VarSetBridgePeer":
+        // track bridged call
+        if (!this.firstBridgedCall) { this.firstBridgedCall = { localChannel: message.channel, remoteChannel: message.value, cli: '' }; }
+        this.lastBridgedCall = { localChannel: message.channel, remoteChannel: message.value, cli: '' };
+
+        // track ongoingCalls
         if (message.value === null) {
           // remote channel disconnected. Park or CallDrop
-          this.ongoingCallsCache = this.ongoingCallsCache.filter(
-            (x) => x.localChannel !== message.channel
-          );
+          this.ongoingCallsCache = this.ongoingCallsCache.filter((x) => x.localChannel !== message.channel);
         } else {
-          const duplicateCall = this.ongoingCallsCache.find(
-            (x) => x.remoteChannel === message.value
-          );
+          const duplicateCall = this.ongoingCallsCache.find((x) => x.remoteChannel === message.value);
           // console.assert(duplicateCall === undefined, 'Call is already active!');
           if (duplicateCall === undefined) {
             const activeCall: ActiveCall = {
@@ -508,14 +512,21 @@ export class ServerConnection {
               remoteChannel: message.value,
               cli: message.attributes.connectedlinenum,
             };
-            this.ongoingCallsCache = this.ongoingCallsCache.filter(
-              (x) => x.remoteChannel !== activeCall.remoteChannel
-            );
+            this.ongoingCallsCache = this.ongoingCallsCache.filter((x) => x.remoteChannel !== activeCall.remoteChannel);
             this.ongoingCallsCache.push(activeCall);
           }
         }
+
         break;
       case "AgentConnect": // fired when call is sent from queue
+        if (message) {
+          this.inTask = true;
+        } else {
+          this.firstBridgedCall = null;
+          this.lastBridgedCall = null;
+          this.inTask = false;
+        }
+
         // register new task
         this.task.next(message);
         break;
@@ -540,9 +551,7 @@ export class ServerConnection {
         this.parkedChannelsCache.push(parkedChannel);
         break;
       case "ParkedCallGiveUp":
-        this.parkedChannelsCache = this.parkedChannelsCache.filter(
-          (x) => x.channel !== message.attributes.parkeechannel
-        );
+        this.parkedChannelsCache = this.parkedChannelsCache.filter((x) => x.channel !== message.attributes.parkeechannel);
         break;
     }
     this.parkedChannels.next(this.parkedChannelsCache);
@@ -575,9 +584,7 @@ export class ServerConnection {
         break;
       case "ConfbridgeLeave":
         if (this.conferenceCallCache !== undefined) {
-          this.conferenceCallCache.members = this.conferenceCallCache.members.filter(
-            (x) => x.channel !== message.channel
-          );
+          this.conferenceCallCache.members = this.conferenceCallCache.members.filter((x) => x.channel !== message.channel);
         }
         break;
       case "ConfbridgeEnd":
@@ -861,6 +868,13 @@ export class ServerConnection {
   public spy(targetdeviceid: string): void {
     this.log("SignalR", "Spy", LogType.Log);
     this.connection.send("Spy", targetdeviceid);
+  }
+
+  public executeAction(actionId: number, param1?: string, param2?: string): void {
+    this.log("SignalR", "ExecuteAction", LogType.Log);
+    this.connection.send("Action", actionId,
+      this.firstBridgedCall?.remoteChannel, this.firstBridgedCall?.localChannel,
+      param1, param2);
   }
 
   //#endregion
