@@ -1,5 +1,5 @@
-export class ActiveCall {
-    localChannel!: string;
-    remoteChannel!: string;
-    cli!: string;
+export interface ActiveCall {
+    localChannel: string;
+    remoteChannel: string;
+    cli: string;
 }
