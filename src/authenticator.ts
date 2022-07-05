@@ -1,4 +1,5 @@
-import { Rxios } from 'rxios';
+import { Observable } from 'rxjs';
+import { Rxios } from './_external/rxios';
 import { Credentials } from './_interfaces/credentials';
 
 export class Authenticator {
@@ -22,7 +23,7 @@ export class Authenticator {
      * @param credentials Agent Credentials
      */
 
-    getAuthToken(credentials: Credentials) {
+    getAuthToken(credentials: Credentials): Observable<any> {
         return this.remote.post('/api/Account/LoginAgent2', credentials);
     }
 }
