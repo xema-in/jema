@@ -50,7 +50,7 @@ export class Rxios {
         }
         return new Observable<T>((subscriber: any) => {
             request
-                .then(response => {
+                .then((response: any) => {
                     subscriber.next(response.data);
                 })
                 .catch((err: Error) => {
