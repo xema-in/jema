@@ -1,4 +1,5 @@
-import { Rxios } from 'rxios';
+import { Observable } from 'rxjs';
+import { Rxios } from './_external/rxios';
 
 export class NetworkTester {
 
@@ -8,7 +9,7 @@ export class NetworkTester {
 
     constructor() { }
 
-    ping(url: string) {
+    ping(url: string): Observable<any> {
         const remote = new Rxios({
             baseURL: url,
         });

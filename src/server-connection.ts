@@ -3,7 +3,8 @@ import * as Collections from 'typescript-collections';
 
 import { Subject, BehaviorSubject, ReplaySubject, Observable } from "rxjs";
 import { tap } from 'rxjs/operators';
-import { Rxios } from "rxios";
+
+import { Rxios } from './_external/rxios';
 
 import { ActiveCall } from "./_interfaces/active-call";
 import { BreakState } from "./_interfaces/break-state";
@@ -107,7 +108,7 @@ export class ServerConnection {
   public parkedChannels = new ReplaySubject<Array<Channel>>(1);
 
   private conferenceCallCache: Conference | undefined;
-  public conferenceCall = new ReplaySubject<Conference>(1);
+  public conferenceCall = new ReplaySubject<Conference | undefined>(1);
 
   // task
   public task = new ReplaySubject<any>(1);
@@ -146,9 +147,7 @@ export class ServerConnection {
     this.remote = new Rxios({
       baseURL: this.backendUrl,
       headers: {
-        common: {
-          Authorization: `Bearer ${token}`,
-        },
+        Authorization: `Bearer ${token}`,
       },
     });
   }
@@ -212,7 +211,7 @@ export class ServerConnection {
             break;
         }
       })
-      .catch((err) => {
+      .catch((/*err*/) => {
         this.log("SignalR-Error", { attempts: this.connectionAttemptCounter, connected: this.connectionCounter }, LogType.Warning);
         this.retry();
       });
@@ -238,7 +237,7 @@ export class ServerConnection {
     //#region connection status 
 
     // websocket connection disconnected
-    this.connection.onclose((err) => {
+    this.connection.onclose((/*err*/) => {
       this.log("SignalR-OnClose", null, LogType.Warning);
 
       const currentPhoneState = this.phoneState.value;
@@ -959,7 +958,7 @@ export class ServerConnection {
     this.log("Deprecated", "UnassignPhone", LogType.Log);
     // this.log("Api", "UnassignPhone");
     // return this.remote.post("/api/Devices/UnassignPhone", {});
-    return new Observable(obs => {
+    return new Observable((obs: any) => {
       obs.next({ message: 'This functionality is removed' });
       obs.complete();
     })
